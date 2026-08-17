@@ -81,6 +81,22 @@ export const strings = {
   tasksDone: { pt: 'concluídas', en: 'done' },
   blockedNote: { pt: 'com bloqueios ativos', en: 'currently blocked' },
   poweredBy: { pt: 'Portugal Production', en: 'Portugal Production' },
+
+  // Download page
+  downloadTitle: { pt: 'Descarregar a app', en: 'Download the app' },
+  downloadSubtitle: {
+    pt: 'Instala a Athena PM no teu telemóvel Android.',
+    en: 'Install Athena PM on your Android phone.',
+  },
+  downloadButton: { pt: '⬇ Descarregar para Android (.apk)', en: '⬇ Download for Android (.apk)' },
+  downloadInstallHint: {
+    pt: 'Ao abrir o ficheiro, o Android vai pedir para confirmares "instalar de fonte desconhecida" — é normal, esta app não vem da Play Store.',
+    en: 'When you open the file, Android will ask you to confirm "install from unknown source" — that\'s normal, this app isn\'t from the Play Store.',
+  },
+  downloadIphoneNote: {
+    pt: 'Tens iPhone? Este instalador é só para Android. Usa a versão web abrindo este mesmo endereço no Safari.',
+    en: "Have an iPhone? This installer is Android-only. Use the web version by opening this same address in Safari.",
+  },
 } as const;
 
 export const processLabel: Record<string, Record<Lang, string>> = {
