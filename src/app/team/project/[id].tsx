@@ -45,7 +45,9 @@ export default function ProjectDetailScreen() {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
-  const [assigneeTarget, setAssigneeTarget] = useState<SdpTask | null>(null);
+  // Tasks to (re)assign together — a single task from the row chip, or every
+  // task in a category from the category-header chip (one owner per list).
+  const [assigneeContext, setAssigneeContext] = useState<SdpTask[] | null>(null);
 
   const load = useCallback(() => {
     api.getProjectTasks(token, id).then((r) => setTasks(r.tasks)).catch((e) => setError(e.message));
@@ -63,6 +65,21 @@ export default function ProjectDetailScreen() {
     } catch (e: any) {
       setError(e.message);
     }
+  };
+
+  const patchMany = async (taskIds: string[], update: Record<string, unknown>) => {
+    try {
+      await Promise.all(taskIds.map((taskId) => api.updateTask(token, id, taskId, update)));
+      load();
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  const categoryAssigneeLabel = (catTasks: SdpTask[]) => {
+    const assigned = catTasks.map((task) => task.assignees[0]).filter(Boolean) as { id: number; username: string }[];
+    const uniqueIds = new Set(assigned.map((a) => a.id));
+    return uniqueIds.size === 1 ? assigned[0].username : t('whoPlaceholder', lang);
   };
 
   const cycleStatus = (task: SdpTask) => {
@@ -148,6 +165,8 @@ export default function ProjectDetailScreen() {
                   name={categoryLabel[cat.name]?.[lang] ?? cat.name}
                   done={cat.tasks.filter((t) => t.status === 'done').length}
                   total={cat.tasks.length}
+                  assigneeLabel={categoryAssigneeLabel(cat.tasks)}
+                  onAssigneePress={() => setAssigneeContext(cat.tasks)}
                 >
                   {cat.tasks.map((task) => (
                     <View key={task.clickupId} style={[styles.taskRow, task.blocked && styles.taskRowBlocked]}>
@@ -155,7 +174,7 @@ export default function ProjectDetailScreen() {
                         <ThemedText style={[styles.statusIcon, { color: STATUS_COLOR[task.status] }]}>{STATUS_ICON[task.status]}</ThemedText>
                       </Pressable>
                       <ThemedText style={styles.taskName}>{taskName(task.seedId, task.name, lang)}</ThemedText>
-                      <Pressable onPress={() => setAssigneeTarget(task)} style={styles.assigneeChip}>
+                      <Pressable onPress={() => setAssigneeContext([task])} style={styles.assigneeChip}>
                         <ThemedText style={styles.assigneeChipText}>{task.assignees[0]?.username ?? t('whoPlaceholder', lang)}</ThemedText>
                       </Pressable>
                       <Pressable onPress={() => toggleBlocked(task)} style={[styles.blockedChip, task.blocked && styles.blockedChipOn]}>
@@ -173,13 +192,16 @@ export default function ProjectDetailScreen() {
       </SafeAreaView>
 
       <ActionSheet
-        visible={!!assigneeTarget}
+        visible={!!assigneeContext}
         title={t('assignTo', lang)}
         cancelLabel={t('cancel', lang)}
-        onCancel={() => setAssigneeTarget(null)}
+        onCancel={() => setAssigneeContext(null)}
         options={
-          assigneeTarget
-            ? members.map((m) => ({ label: m.username, onPress: () => patch(assigneeTarget.clickupId, { assigneeId: m.id }) }))
+          assigneeContext
+            ? members.map((m) => ({
+                label: m.username,
+                onPress: () => patchMany(assigneeContext.map((task) => task.clickupId), { assigneeId: m.id }),
+              }))
             : []
         }
       />
