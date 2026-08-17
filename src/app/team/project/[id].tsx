@@ -57,21 +57,45 @@ export default function ProjectDetailScreen() {
     api.teamMembers(token).then(setMembers);
   }, []);
 
+  // Optimistic: update the screen immediately instead of re-fetching all 73
+  // tasks after every tap — only re-fetch (to resync with the real state) if
+  // the write actually fails.
+  const applyLocalUpdate = (taskIds: string[], update: Record<string, unknown>) => {
+    setTasks((prev) =>
+      prev
+        ? prev.map((task) => {
+            if (!taskIds.includes(task.clickupId)) return task;
+            const next = { ...task };
+            if ('status' in update) next.status = update.status as SdpTask['status'];
+            if ('blocked' in update) next.blocked = update.blocked as boolean;
+            if ('assigneeId' in update) {
+              const assigneeId = update.assigneeId as number | null;
+              const member = members.find((m) => m.id === assigneeId);
+              next.assignees = assigneeId != null && member ? [{ id: member.id, username: member.username }] : [];
+            }
+            return next;
+          })
+        : prev
+    );
+  };
+
   const patch = async (taskId: string, update: Record<string, unknown>) => {
+    applyLocalUpdate([taskId], update);
     try {
       await api.updateTask(token, id, taskId, update);
-      load();
     } catch (e: any) {
       setError(e.message);
+      load();
     }
   };
 
   const patchMany = async (taskIds: string[], update: Record<string, unknown>) => {
+    applyLocalUpdate(taskIds, update);
     try {
       await Promise.all(taskIds.map((taskId) => api.updateTask(token, id, taskId, update)));
-      load();
     } catch (e: any) {
       setError(e.message);
+      load();
     }
   };
 
