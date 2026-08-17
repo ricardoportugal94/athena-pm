@@ -76,12 +76,12 @@ export default function LoginScreen() {
               </Pressable>
               <ThemedText style={styles.hint}>{t('adminDomainHint', lang)}</ThemedText>
 
-              <Pressable onPress={() => setMode('signup')} style={styles.linkRow}>
-                <ThemedText style={styles.linkPlain}>{t('noGooglePrefix', lang)}</ThemedText>
-                <ThemedText style={styles.link}>{t('createAccountLink', lang)}</ThemedText>
+              <Pressable style={styles.googleButton} onPress={() => setMode('login')}>
+                <ThemedText style={styles.googleButtonText}>{t('alreadyClientLink', lang)}</ThemedText>
               </Pressable>
-              <Pressable onPress={() => setMode('login')}>
-                <ThemedText style={styles.link}>{t('alreadyClientLink', lang)}</ThemedText>
+
+              <Pressable onPress={() => setMode('signup')}>
+                <ThemedText style={styles.link}>{t('createAccountLink', lang)}</ThemedText>
               </Pressable>
             </>
           )}
@@ -184,6 +184,7 @@ function LoginForm({ lang, onBack, onDone }: { lang: Lang; onBack: () => void; o
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
 
   const submit = async () => {
     setSubmitting(true);
@@ -208,6 +209,12 @@ function LoginForm({ lang, onBack, onDone }: { lang: Lang; onBack: () => void; o
       <Pressable style={styles.button} onPress={submit} disabled={submitting}>
         {submitting ? <ActivityIndicator color={Brand.ink} /> : <ThemedText style={styles.buttonText}>{t('logInButton', lang)}</ThemedText>}
       </Pressable>
+
+      <Pressable onPress={() => setShowForgot((v) => !v)} style={styles.backLink}>
+        <ThemedText style={styles.link}>{t('forgotPasswordLink', lang)}</ThemedText>
+      </Pressable>
+      {showForgot && <ThemedText style={styles.forgotHint}>{t('forgotPasswordBody', lang)}</ThemedText>}
+
       <Pressable onPress={onBack} style={styles.backLink}>
         <ThemedText style={styles.link}>{t('back', lang)}</ThemedText>
       </Pressable>
@@ -229,8 +236,6 @@ const styles = StyleSheet.create({
   googleButton: { alignSelf: 'stretch', backgroundColor: Brand.accent, borderRadius: Radius.pill, paddingVertical: Spacing.three, alignItems: 'center' },
   googleButtonText: { color: Brand.ink, fontWeight: '800' },
   hint: { color: '#9A9A9A', fontSize: 12, textAlign: 'center' },
-  linkRow: { flexDirection: 'row' },
-  linkPlain: { color: '#6B6B6B' },
   link: { color: '#8CA300', fontWeight: '700' },
   backLink: { alignItems: 'center' },
   form: { alignSelf: 'stretch', gap: Spacing.two },
@@ -252,4 +257,5 @@ const styles = StyleSheet.create({
   resultRowNew: { padding: Spacing.two },
   resultRowNewText: { color: '#7A8F00', fontWeight: '700' },
   newProjectHint: { color: '#7A8F00', fontSize: 12, textAlign: 'center' },
+  forgotHint: { color: '#6B6B6B', fontSize: 12, textAlign: 'center', marginTop: -Spacing.one },
 });

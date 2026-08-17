@@ -20,7 +20,6 @@ export const strings = {
   googleLoginFailed: { pt: 'Não foi possível iniciar sessão com a Google.', en: 'Could not sign in with Google.' },
   loginWithGoogle: { pt: 'ENTRAR COM GOOGLE', en: 'LOG IN WITH GOOGLE' },
   adminDomainHint: { pt: 'Só contas @rstivali.pt entram como equipa.', en: 'Only @rstivali.pt accounts can sign in as team.' },
-  noGooglePrefix: { pt: 'Não quero usar o Google · ', en: "Don't want to use Google · " },
   createAccountLink: { pt: 'Criar conta', en: 'Sign up' },
   alreadyClientLink: { pt: 'Já tenho conta de cliente', en: 'I already have a client account' },
   darkMode: { pt: 'MODO ESCURO', en: 'DARK MODE' },
@@ -58,6 +57,31 @@ export const strings = {
     en: 'This deletes the project and all its tasks in ClickUp. This cannot be undone.',
   },
   registeredClients: { pt: 'clientes registados', en: 'registered clients' },
+
+  // Team: clients screen
+  clientsTitle: { pt: 'Clientes', en: 'Clients' },
+  noClientsYet: { pt: 'Sem clientes registados ainda.', en: 'No registered clients yet.' },
+  resetPasswordAction: { pt: 'Repor password', en: 'Reset password' },
+  confirmResetTitle: { pt: 'Repor password?', en: 'Reset password?' },
+  confirmResetBody: {
+    pt: 'A password atual deixa de funcionar. Vais receber uma nova password temporária para dares ao cliente.',
+    en: 'The current password stops working. You\'ll get a new temporary password to give the client.',
+  },
+  newPasswordTitle: { pt: 'Nova password temporária', en: 'New temporary password' },
+  newPasswordHint: {
+    pt: 'Copia e envia esta password ao cliente — não vai voltar a ser mostrada.',
+    en: "Copy and send this password to the client — it won't be shown again.",
+  },
+  copyPassword: { pt: 'Copiar password', en: 'Copy password' },
+  passwordCopied: { pt: 'Copiada!', en: 'Copied!' },
+  close: { pt: 'Fechar', en: 'Close' },
+
+  // Login: forgot password
+  forgotPasswordLink: { pt: 'Esqueci-me da password', en: 'Forgot password' },
+  forgotPasswordBody: {
+    pt: 'Contacta a equipa da Portugal Production para te reporem a password.',
+    en: 'Contact the Portugal Production team to have your password reset.',
+  },
 
   // Team: project detail
   homeButton: { pt: '🏠 Início', en: '🏠 Home' },

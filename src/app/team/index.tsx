@@ -1,5 +1,5 @@
 import * as Clipboard from 'expo-clipboard';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -110,11 +110,11 @@ export default function ProjectListScreen() {
           <View style={styles.heroBottomRow}>
             <ThemedText style={styles.adminName}>{admin.name}</ThemedText>
             {clientCount !== null && (
-              <View style={styles.clientCountBadge}>
+              <Pressable onPress={() => router.push('/team/clients')} style={styles.clientCountBadge}>
                 <ThemedText style={styles.clientCountText}>
                   {clientCount} {t('registeredClients', lang)}
                 </ThemedText>
-              </View>
+              </Pressable>
             )}
           </View>
         </HeroPanel>

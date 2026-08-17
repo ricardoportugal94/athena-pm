@@ -53,8 +53,11 @@ export const api = {
 
   deleteProject: (token: string, projectId: string) => request(`/api/projects/${projectId}`, { method: 'DELETE', token }),
 
-  listClientAccounts: (token: string): Promise<{ email: string; projectId: string; projectName: string }[]> =>
+  listClientAccounts: (token: string): Promise<{ taskId: string; email: string; projectId: string; projectName: string }[]> =>
     request('/api/client-accounts', { token }),
+
+  resetClientPassword: (token: string, taskId: string): Promise<{ tempPassword: string }> =>
+    request(`/api/client-accounts/${taskId}/reset-password`, { method: 'POST', token }),
 
   getProjectTasks: (token: string, projectId: string) => request(`/api/projects/${projectId}/tasks`, { token }),
 

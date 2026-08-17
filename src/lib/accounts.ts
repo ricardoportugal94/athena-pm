@@ -51,6 +51,10 @@ export async function findAccountByEmail(email: string): Promise<ClientAccount |
   return accounts.find((a) => a.email.toLowerCase() === normalized) ?? null;
 }
 
+export async function setPasswordHash(taskId: string, passwordHash: string): Promise<void> {
+  await cu('POST', `/task/${taskId}/field/${accountsConfig.fields.passwordHash}`, { value: passwordHash });
+}
+
 export async function createAccount(email: string, passwordHash: string, projectId: string, projectName: string): Promise<ClientAccount> {
   const task = await cu('POST', `/list/${accountsConfig.listId}/task`, {
     name: email,
