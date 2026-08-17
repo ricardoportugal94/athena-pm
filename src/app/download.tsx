@@ -8,7 +8,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { t, type Lang } from '@/i18n';
 
 // Update this whenever a new build is generated via `eas build --platform android --profile preview`.
-const ANDROID_APK_URL = 'https://expo.dev/artifacts/eas/UKQR8-vq3k_UjEC4k3d-srhlGxaR2vOJwbZM3JSG4XY.apk';
+const ANDROID_APK_URL = 'https://expo.dev/artifacts/eas/9mTN1j0eUFOeR2POZ45uL0_it6-mpeGO6umjBtq5DT0.apk';
 
 export default function DownloadScreen() {
   const { lang, setLang } = useLanguage();
