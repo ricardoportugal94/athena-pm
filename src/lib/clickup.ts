@@ -202,10 +202,12 @@ export type TaskUpdate = {
 export class TaskUpdateError extends Error {}
 
 export async function updateTask(taskId: string, update: TaskUpdate) {
+  const needsCurrent = update.status === 'in_progress' || update.assigneeId !== undefined;
+  const current = needsCurrent ? await cu('GET', `/task/${taskId}`) : null;
+
   // Business rule (plan §"Assignee obrigatório"): a task cannot move to "in progress"
   // without an assignee. Checked here, server-side, not just in the UI.
   if (update.status === 'in_progress') {
-    const current = await cu('GET', `/task/${taskId}`);
     const willHaveAssignee = update.assigneeId != null || (current.assignees ?? []).length > 0;
     if (!willHaveAssignee) {
       throw new TaskUpdateError('Uma tarefa não pode passar a "in progress" sem um responsável atribuído.');
@@ -217,7 +219,13 @@ export async function updateTask(taskId: string, update: TaskUpdate) {
     await cu('PUT', `/task/${taskId}`, { status: label });
   }
   if (update.assigneeId !== undefined) {
-    await cu('PUT', `/task/${taskId}`, update.assigneeId == null ? { assignees: { rem: [] } } : { assignees: { add: [update.assigneeId] } });
+    // One owner per task: replace whatever assignees are already there instead
+    // of just adding — otherwise re-assigning piles up multiple assignees and
+    // the UI can't tell who the "real" owner is anymore.
+    const currentIds: number[] = (current.assignees ?? []).map((a: any) => a.id);
+    const rem = currentIds.filter((currentId) => currentId !== update.assigneeId);
+    const add = update.assigneeId != null && !currentIds.includes(update.assigneeId) ? [update.assigneeId] : [];
+    await cu('PUT', `/task/${taskId}`, { assignees: { add, rem } });
   }
   if (update.blocked !== undefined) {
     await cu('POST', `/task/${taskId}/field/${clickupConfig.fields.blocked.id}`, { value: update.blocked });
