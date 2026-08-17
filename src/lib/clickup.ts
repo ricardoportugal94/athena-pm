@@ -240,8 +240,14 @@ export async function updateTask(taskId: string, update: TaskUpdate) {
 
 export type TeamMember = { id: number; username: string; email: string };
 
+// Workspace members hidden from Athena's assignee picker without touching
+// their actual ClickUp membership (they may still be needed elsewhere).
+const HIDDEN_ASSIGNEE_USERNAMES = ['yusuke matsumoto'];
+
 export async function listTeamMembers(): Promise<TeamMember[]> {
   const { teams } = await cu('GET', '/team');
   const team = (teams as any[]).find((t) => t.id === WORKSPACE_ID);
-  return (team?.members ?? []).map((m: any) => ({ id: m.user.id, username: m.user.username, email: m.user.email }));
+  return (team?.members ?? [])
+    .map((m: any) => ({ id: m.user.id, username: m.user.username, email: m.user.email }))
+    .filter((m: TeamMember) => !HIDDEN_ASSIGNEE_USERNAMES.includes(m.username?.toLowerCase()));
 }
