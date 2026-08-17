@@ -31,7 +31,15 @@ export default function LoginScreen() {
 
   const redirectUri = AuthSession.makeRedirectUri();
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
-    { clientId: GOOGLE_CLIENT_ID, scopes: ['openid', 'email', 'profile'], redirectUri, usePKCE: true },
+    {
+      clientId: GOOGLE_CLIENT_ID,
+      scopes: ['openid', 'email', 'profile'],
+      redirectUri,
+      usePKCE: true,
+      // Without this, Google skips the account picker and silently reuses
+      // whatever Google account is already active in the browser.
+      extraParams: { prompt: 'select_account' },
+    },
     GOOGLE_DISCOVERY
   );
 
