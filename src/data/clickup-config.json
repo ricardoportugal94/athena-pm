@@ -1,0 +1,62 @@
+{
+  "spaceId": "901511731649",
+  "folderId": "901517225654",
+  "statuses": {
+    "todo": "to do",
+    "inProgress": "in progress",
+    "done": "Done"
+  },
+  "fields": {
+    "process": {
+      "id": "131c2221-bd7c-45da-8022-758be45c948d",
+      "options": {
+        "Sourcing": "70c880b1-a4a2-4144-8ea9-8457286dc1df",
+        "Development": "bb32119f-a8a0-44d3-9b66-3b19a6c46b0d",
+        "Production": "247811a6-b21e-45a9-82e2-17a2e4f44e09"
+      }
+    },
+    "phase": {
+      "id": "a65788fd-2f3f-4b94-bde6-c576b1632e96",
+      "options": {
+        "1. Prepare": "fe9ee080-1b10-4b04-83ed-809608b7bbdf",
+        "2. Test": "7b5f9634-94d5-45c9-a51a-8d224e545a4e",
+        "3. Make": "6494dc71-2db3-4e93-ac1d-6c3d11b7d8ae"
+      }
+    },
+    "category": {
+      "id": "7c1d8a98-7a04-4db3-9abe-2c2c192ce8bd",
+      "options": {
+        "Materiais": "84b1292c-7c51-4a38-8626-d65ac49bd633",
+        "Componentes e Ferragens": "582164e8-3692-425f-88ae-d592088c4168",
+        "Fornecedores": "4d796783-ecd5-4bf8-9b1a-76dbca23a37e",
+        "Fabricante": "489e87e0-2568-4989-a485-b23a3c6344c8",
+        "Prototipagem": "d6e677a8-c989-44b8-897e-af6fbcd4390e",
+        "Correções": "6ac4a6e7-f662-49f2-b9da-dd9efdc7915d",
+        "Amostras de Confirmação": "896de9b7-9977-4831-8245-46e2fa4a7c6a",
+        "Encomenda e Calendário de Produção": "275f2b93-e48e-4079-9461-6872cedb218f",
+        "2ª Amostra": "71d8e98f-b98e-4033-af89-50d421a7b223",
+        "Ferramentas e Gradação": "882330a0-38cb-4953-ac44-e20563ef2a94",
+        "Ensaio de Produção": "c7816223-8d5d-4352-bce3-0220896e83fa",
+        "Produção em Massa": "eb45034b-6962-4210-b3cb-11a42ff47e74"
+      }
+    },
+    "applicable": {
+      "id": "26cebf17-97ac-4afb-93f6-00c883f4a317"
+    },
+    "blocked": {
+      "id": "e84f382b-e380-4758-9ae0-ede4b1850f3e"
+    },
+    "blockerReason": {
+      "id": "e6c01b23-479b-49d8-a126-2022ab78e56c"
+    },
+    "blockerOwner": {
+      "id": "1e864d9e-c87c-4c21-9a5c-589edffeb147"
+    },
+    "blockerExpectedDate": {
+      "id": "e4418792-1dd8-4e5c-b765-4c4351c471cf"
+    },
+    "notes": {
+      "id": "61b18e99-c2ac-4c9a-84c5-5c8a7c75c5bc"
+    }
+  }
+}

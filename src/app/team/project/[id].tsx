@@ -1,0 +1,218 @@
+import { router, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { ActionSheet } from '@/components/action-sheet';
+import { CategoryCard } from '@/components/category-card';
+import { HeroPanel } from '@/components/hero-panel';
+import { computePoints, ProgressCard } from '@/components/progress-card';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { Brand, PhaseColors, Radius, Spacing } from '@/constants/theme';
+import { useAuth } from '@/hooks/use-auth';
+import { useLanguage } from '@/hooks/use-language';
+import { useThemeToggle } from '@/hooks/use-theme';
+import { categoryLabel, phaseLabel, t } from '@/i18n';
+import { taskName } from '@/i18n/task-names';
+import { api, type TeamMember } from '@/lib/api-client';
+
+type SdpTask = {
+  clickupId: string;
+  seedId: string | null;
+  name: string;
+  order: number;
+  process: 'S' | 'D' | 'P' | null;
+  phase: 1 | 2 | 3 | null;
+  category: string | null;
+  status: 'not_started' | 'in_progress' | 'done';
+  assignees: { id: number; username: string }[];
+  blocked: boolean;
+};
+
+const STATUS_ICON: Record<SdpTask['status'], string> = { not_started: '○', in_progress: '◐', done: '●' };
+const STATUS_COLOR: Record<SdpTask['status'], string> = { not_started: '#B8BCC4', in_progress: '#5f55ee', done: '#0f9d9f' };
+const NEXT_STATUS: Record<SdpTask['status'], SdpTask['status']> = { not_started: 'in_progress', in_progress: 'done', done: 'not_started' };
+
+export default function ProjectDetailScreen() {
+  const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
+  const { stored } = useAuth();
+  const { scheme, toggle } = useThemeToggle();
+  const { lang } = useLanguage();
+  const token = stored!.token;
+
+  const [tasks, setTasks] = useState<SdpTask[] | null>(null);
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [assigneeTarget, setAssigneeTarget] = useState<SdpTask | null>(null);
+
+  const load = useCallback(() => {
+    api.getProjectTasks(token, id).then((r) => setTasks(r.tasks)).catch((e) => setError(e.message));
+  }, [token, id]);
+
+  useEffect(load, [load]);
+  useEffect(() => {
+    api.teamMembers(token).then(setMembers);
+  }, []);
+
+  const patch = async (taskId: string, update: Record<string, unknown>) => {
+    try {
+      await api.updateTask(token, id, taskId, update);
+      load();
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  const cycleStatus = (task: SdpTask) => {
+    const next = NEXT_STATUS[task.status];
+    if (next === 'in_progress' && task.assignees.length === 0) {
+      setError(t('missingAssigneeBody', lang));
+      return;
+    }
+    setError(null);
+    patch(task.clickupId, { status: next });
+  };
+
+  const toggleBlocked = (task: SdpTask) => patch(task.clickupId, { blocked: !task.blocked });
+
+  const shareWithClient = async () => {
+    try {
+      const res = await api.createClientLink(token, id);
+      setShareUrl(res.url);
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  const phases = useMemo(() => {
+    const all = tasks ?? [];
+    return [1, 2, 3].map((phase) => {
+      const phaseTasks = all.filter((t) => t.phase === phase);
+      const categories: { name: string; tasks: SdpTask[] }[] = [];
+      for (const t of phaseTasks.sort((a, b) => a.order - b.order)) {
+        const cat = categories.find((c) => c.name === t.category);
+        if (cat) cat.tasks.push(t);
+        else categories.push({ name: t.category ?? '—', tasks: [t] });
+      }
+      const done = phaseTasks.filter((t) => t.status === 'done').length;
+      return { phase, title: `${t('phaseWord', lang)} ${phaseLabel[phase][lang]}`, categories, done, total: phaseTasks.length };
+    });
+  }, [tasks, lang]);
+
+  const totalDone = phases.reduce((s, p) => s + p.done, 0);
+  const totalCount = phases.reduce((s, p) => s + p.total, 0);
+  const percent = totalCount ? Math.round((totalDone / totalCount) * 100) : 0;
+  const points = computePoints(Object.fromEntries(phases.map((p) => [p.phase, { done: p.done, total: p.total }])));
+
+  return (
+    <ThemedView style={styles.screen}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <HeroPanel
+          size="title"
+          title={name ?? 'Projeto'}
+          subtitle={t('sdpMatrix', lang)}
+          right={
+            <View style={styles.heroActions}>
+              <Pressable onPress={() => router.push('/team')} style={styles.pillButton}>
+                <ThemedText style={styles.pillButtonText}>{t('homeButton', lang)}</ThemedText>
+              </Pressable>
+              <Pressable onPress={toggle} style={styles.pillButton}>
+                <ThemedText style={styles.pillButtonText}>{scheme === 'dark' ? '☀️' : '🌙'}</ThemedText>
+              </Pressable>
+              <Pressable onPress={shareWithClient} style={styles.pillButton}>
+                <ThemedText style={styles.pillButtonText}>{t('clientLinkButton', lang)}</ThemedText>
+              </Pressable>
+            </View>
+          }
+        />
+
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.body}>
+          {tasks && <ProgressCard percent={percent} points={points} label={t('completeLabel', lang)} pointsLabel={t('pointsWord', lang)} />}
+          {shareUrl && <ThemedText selectable style={styles.shareUrl}>{shareUrl}</ThemedText>}
+          {error && <ThemedText style={styles.error}>{error}</ThemedText>}
+
+          {phases.map((p) => (
+            <View key={p.phase} style={styles.phaseBlock}>
+              <View style={[styles.phaseBadge, { backgroundColor: PhaseColors[p.phase] }]}>
+                <ThemedText type="phaseHeading" style={styles.phaseBadgeText}>
+                  {p.title}
+                </ThemedText>
+              </View>
+              <ThemedText style={styles.phaseSub}>{p.done}/{p.total} {t('tasksWord', lang)}</ThemedText>
+
+              {p.categories.map((cat) => (
+                <CategoryCard
+                  key={cat.name}
+                  name={categoryLabel[cat.name]?.[lang] ?? cat.name}
+                  done={cat.tasks.filter((t) => t.status === 'done').length}
+                  total={cat.tasks.length}
+                >
+                  {cat.tasks.map((task) => (
+                    <View key={task.clickupId} style={[styles.taskRow, task.blocked && styles.taskRowBlocked]}>
+                      <Pressable onPress={() => cycleStatus(task)} style={styles.statusTap}>
+                        <ThemedText style={[styles.statusIcon, { color: STATUS_COLOR[task.status] }]}>{STATUS_ICON[task.status]}</ThemedText>
+                      </Pressable>
+                      <ThemedText style={styles.taskName}>{taskName(task.seedId, task.name, lang)}</ThemedText>
+                      <Pressable onPress={() => setAssigneeTarget(task)} style={styles.assigneeChip}>
+                        <ThemedText style={styles.assigneeChipText}>{task.assignees[0]?.username ?? t('whoPlaceholder', lang)}</ThemedText>
+                      </Pressable>
+                      <Pressable onPress={() => toggleBlocked(task)} style={[styles.blockedChip, task.blocked && styles.blockedChipOn]}>
+                        <ThemedText style={task.blocked ? styles.blockedChipOnText : styles.blockedChipText}>
+                          {task.blocked ? '⚑' : '⚐'}
+                        </ThemedText>
+                      </Pressable>
+                    </View>
+                  ))}
+                </CategoryCard>
+              ))}
+            </View>
+          ))}
+        </ScrollView>
+      </SafeAreaView>
+
+      <ActionSheet
+        visible={!!assigneeTarget}
+        title={t('assignTo', lang)}
+        cancelLabel={t('cancel', lang)}
+        onCancel={() => setAssigneeTarget(null)}
+        options={
+          assigneeTarget
+            ? members.map((m) => ({ label: m.username, onPress: () => patch(assigneeTarget.clickupId, { assigneeId: m.id }) }))
+            : []
+        }
+      />
+    </ThemedView>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  safeArea: { flex: 1 },
+  heroActions: { flexDirection: 'row', gap: Spacing.two },
+  pillButton: { borderWidth: 1.5, borderColor: Brand.ink, borderRadius: Radius.pill, paddingVertical: 6, paddingHorizontal: 12 },
+  pillButtonText: { color: Brand.ink, fontWeight: '700', fontSize: 12 },
+  scroll: { flex: 1 },
+  body: { padding: Spacing.four, gap: Spacing.three, maxWidth: 860, alignSelf: 'center', width: '100%', paddingBottom: Spacing.six },
+  shareUrl: { color: '#8CA300' },
+  error: { color: '#E74C3C' },
+  phaseBlock: { gap: Spacing.two, marginTop: Spacing.two },
+  // Badge (fixed color bg + fixed dark text) instead of colored text directly
+  // on the page — colored text alone had bad contrast in one of the two themes.
+  phaseBadge: { alignSelf: 'flex-start', paddingVertical: 4, paddingHorizontal: 12, borderRadius: Radius.pill },
+  phaseBadgeText: { color: '#1C1C1C', fontSize: 13 },
+  phaseSub: { color: '#9A9A9A', fontSize: 12, fontWeight: '600', marginTop: -Spacing.one, marginBottom: Spacing.one },
+  taskRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.one },
+  taskRowBlocked: { backgroundColor: '#FFF6EC', borderRadius: Radius.small },
+  statusTap: { padding: 4 },
+  statusIcon: { fontSize: 20 },
+  taskName: { flex: 1, color: '#1C1C1C', fontSize: 14 },
+  // Fixed light pills regardless of app theme.
+  assigneeChip: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: Radius.pill, backgroundColor: '#E5E5E5' },
+  assigneeChipText: { color: '#2B2E33', fontSize: 11 },
+  blockedChip: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: Radius.pill, backgroundColor: '#F1DCC5' },
+  blockedChipText: { color: '#5C3A1E', fontSize: 12 },
+  blockedChipOn: { backgroundColor: '#e16b16' },
+  blockedChipOnText: { color: '#FFFFFF', fontSize: 12 },
+});
