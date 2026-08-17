@@ -92,7 +92,11 @@ export default function ProjectDetailScreen() {
   const patchMany = async (taskIds: string[], update: Record<string, unknown>) => {
     applyLocalUpdate(taskIds, update);
     try {
-      await Promise.all(taskIds.map((taskId) => api.updateTask(token, id, taskId, update)));
+      // Sequential, not Promise.all — firing every write at once has been
+      // flaky against the free-tier server, silently dropping one of them.
+      for (const taskId of taskIds) {
+        await api.updateTask(token, id, taskId, update);
+      }
     } catch (e: any) {
       setError(e.message);
       load();
