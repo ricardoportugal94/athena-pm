@@ -174,9 +174,6 @@ export default function ProjectDetailScreen() {
                         <ThemedText style={[styles.statusIcon, { color: STATUS_COLOR[task.status] }]}>{STATUS_ICON[task.status]}</ThemedText>
                       </Pressable>
                       <ThemedText style={styles.taskName}>{taskName(task.seedId, task.name, lang)}</ThemedText>
-                      <Pressable onPress={() => setAssigneeContext([task])} style={styles.assigneeChip}>
-                        <ThemedText style={styles.assigneeChipText}>{task.assignees[0]?.username ?? t('whoPlaceholder', lang)}</ThemedText>
-                      </Pressable>
                       <Pressable onPress={() => toggleBlocked(task)} style={[styles.blockedChip, task.blocked && styles.blockedChipOn]}>
                         <ThemedText style={task.blocked ? styles.blockedChipOnText : styles.blockedChipText}>
                           {task.blocked ? '⚑' : '⚐'}
@@ -231,8 +228,6 @@ const styles = StyleSheet.create({
   statusIcon: { fontSize: 20 },
   taskName: { flex: 1, color: '#1C1C1C', fontSize: 14 },
   // Fixed light pills regardless of app theme.
-  assigneeChip: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: Radius.pill, backgroundColor: '#E5E5E5' },
-  assigneeChipText: { color: '#2B2E33', fontSize: 11 },
   blockedChip: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: Radius.pill, backgroundColor: '#F1DCC5' },
   blockedChipText: { color: '#5C3A1E', fontSize: 12 },
   blockedChipOn: { backgroundColor: '#e16b16' },
