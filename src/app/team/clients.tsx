@@ -26,6 +26,7 @@ export default function ClientsScreen() {
   const [resetTarget, setResetTarget] = useState<ClientAccountRow | null>(null);
   const [resetResult, setResetResult] = useState<{ email: string; tempPassword: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ClientAccountRow | null>(null);
 
   const load = useCallback(() => {
     api.listClientAccounts(token).then(setAccounts).catch((e) => setError(e.message));
@@ -37,6 +38,15 @@ export default function ClientsScreen() {
     try {
       const res = await api.resetClientPassword(token, account.taskId);
       setResetResult({ email: account.email, tempPassword: res.tempPassword });
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  const doDelete = async (account: ClientAccountRow) => {
+    try {
+      await api.deleteClientAccount(token, account.taskId);
+      load();
     } catch (e: any) {
       setError(e.message);
     }
@@ -79,9 +89,14 @@ export default function ClientsScreen() {
                   </ThemedText>
                   <ThemedText style={styles.projectName}>{item.projectName}</ThemedText>
                 </View>
-                <Pressable onPress={() => setResetTarget(item)} style={styles.resetButton}>
-                  <ThemedText style={styles.resetButtonText}>{t('resetPasswordAction', lang)}</ThemedText>
-                </Pressable>
+                <View style={styles.actions}>
+                  <Pressable onPress={() => setResetTarget(item)} style={styles.resetButton}>
+                    <ThemedText style={styles.resetButtonText}>{t('resetPasswordAction', lang)}</ThemedText>
+                  </Pressable>
+                  <Pressable onPress={() => setDeleteTarget(item)} style={styles.deleteButton}>
+                    <ThemedText style={styles.deleteButtonText}>{t('deleteAction', lang)}</ThemedText>
+                  </Pressable>
+                </View>
               </View>
             )}
             ListEmptyComponent={accounts ? <ThemedText themeColor="textSecondary">{t('noClientsYet', lang)}</ThemedText> : null}
@@ -105,6 +120,15 @@ export default function ClientsScreen() {
         cancelLabel={t('close', lang)}
         onCancel={() => setResetResult(null)}
         options={resetResult ? [{ label: copied ? t('passwordCopied', lang) : t('copyPassword', lang), onPress: copyPassword }] : []}
+      />
+
+      <ActionSheet
+        visible={!!deleteTarget}
+        title={t('confirmDeleteClientTitle', lang)}
+        message={deleteTarget ? `${deleteTarget.email} — ${t('confirmDeleteClientBody', lang)}` : undefined}
+        cancelLabel={t('cancel', lang)}
+        onCancel={() => setDeleteTarget(null)}
+        options={deleteTarget ? [{ label: t('deleteAction', lang), destructive: true, onPress: () => doDelete(deleteTarget) }] : []}
       />
     </ThemedView>
   );
@@ -131,6 +155,9 @@ const styles = StyleSheet.create({
   cardMain: { flex: 1, gap: 2 },
   email: { color: '#1C1C1C', fontSize: 15 },
   projectName: { color: '#8A8A8A', fontSize: 12, fontWeight: '600' },
+  actions: { flexDirection: 'row', gap: Spacing.one },
   resetButton: { backgroundColor: '#F2F2F2', borderRadius: Radius.pill, paddingVertical: 8, paddingHorizontal: 12 },
   resetButtonText: { color: '#7A8F00', fontWeight: '700', fontSize: 12 },
+  deleteButton: { backgroundColor: '#F2F2F2', borderRadius: Radius.pill, paddingVertical: 8, paddingHorizontal: 12 },
+  deleteButtonText: { color: '#C0392B', fontWeight: '700', fontSize: 12 },
 });

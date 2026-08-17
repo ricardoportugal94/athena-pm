@@ -75,6 +75,11 @@ export const strings = {
   copyPassword: { pt: 'Copiar password', en: 'Copy password' },
   passwordCopied: { pt: 'Copiada!', en: 'Copied!' },
   close: { pt: 'Fechar', en: 'Close' },
+  confirmDeleteClientTitle: { pt: 'Eliminar cliente?', en: 'Delete client?' },
+  confirmDeleteClientBody: {
+    pt: 'Elimina a conta de acesso do cliente. O projeto e as tarefas no ClickUp não são afetados.',
+    en: "Deletes the client's account. The project and its tasks in ClickUp are not affected.",
+  },
 
   // Login: forgot password
   forgotPasswordLink: { pt: 'Esqueci-me da password', en: 'Forgot password' },

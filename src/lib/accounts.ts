@@ -55,6 +55,10 @@ export async function setPasswordHash(taskId: string, passwordHash: string): Pro
   await cu('POST', `/task/${taskId}/field/${accountsConfig.fields.passwordHash}`, { value: passwordHash });
 }
 
+export async function deleteAccount(taskId: string): Promise<void> {
+  await cu('DELETE', `/task/${taskId}`);
+}
+
 export async function createAccount(email: string, passwordHash: string, projectId: string, projectName: string): Promise<ClientAccount> {
   const task = await cu('POST', `/list/${accountsConfig.listId}/task`, {
     name: email,

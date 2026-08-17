@@ -59,6 +59,8 @@ export const api = {
   resetClientPassword: (token: string, taskId: string): Promise<{ tempPassword: string }> =>
     request(`/api/client-accounts/${taskId}/reset-password`, { method: 'POST', token }),
 
+  deleteClientAccount: (token: string, taskId: string) => request(`/api/client-accounts/${taskId}`, { method: 'DELETE', token }),
+
   getProjectTasks: (token: string, projectId: string) => request(`/api/projects/${projectId}/tasks`, { token }),
 
   updateTask: (token: string, projectId: string, taskId: string, update: Record<string, unknown>) =>
