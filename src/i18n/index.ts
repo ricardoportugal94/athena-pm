@@ -99,8 +99,8 @@ export const strings = {
   assignTo: { pt: 'Atribuir a', en: 'Assign to' },
   missingAssignee: { pt: 'Falta responsável', en: 'Missing assignee' },
   missingAssigneeBody: {
-    pt: 'Atribui um responsável a esta tarefa antes de a passar a "Em curso".',
-    en: 'Assign someone to this task before moving it to "In progress".',
+    pt: 'Atribui um responsável a esta categoria antes de marcar a tarefa como concluída.',
+    en: 'Assign someone to this category before marking the task as done.',
   },
   couldNotSave: { pt: 'Não foi possível guardar', en: 'Could not save' },
 

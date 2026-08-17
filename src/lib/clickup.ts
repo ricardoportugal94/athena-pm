@@ -202,15 +202,15 @@ export type TaskUpdate = {
 export class TaskUpdateError extends Error {}
 
 export async function updateTask(taskId: string, update: TaskUpdate) {
-  const needsCurrent = update.status === 'in_progress' || update.assigneeId !== undefined;
+  const needsCurrent = update.status === 'done' || update.assigneeId !== undefined;
   const current = needsCurrent ? await cu('GET', `/task/${taskId}`) : null;
 
-  // Business rule (plan §"Assignee obrigatório"): a task cannot move to "in progress"
+  // Business rule (plan §"Assignee obrigatório"): a task cannot be marked done
   // without an assignee. Checked here, server-side, not just in the UI.
-  if (update.status === 'in_progress') {
+  if (update.status === 'done') {
     const willHaveAssignee = update.assigneeId != null || (current.assignees ?? []).length > 0;
     if (!willHaveAssignee) {
-      throw new TaskUpdateError('Uma tarefa não pode passar a "in progress" sem um responsável atribuído.');
+      throw new TaskUpdateError('Uma tarefa não pode ser marcada como concluída sem um responsável atribuído.');
     }
   }
 

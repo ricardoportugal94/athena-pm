@@ -32,7 +32,6 @@ type SdpTask = {
 
 const STATUS_ICON: Record<SdpTask['status'], string> = { not_started: '○', in_progress: '◐', done: '●' };
 const STATUS_COLOR: Record<SdpTask['status'], string> = { not_started: '#B8BCC4', in_progress: '#5f55ee', done: '#0f9d9f' };
-const NEXT_STATUS: Record<SdpTask['status'], SdpTask['status']> = { not_started: 'in_progress', in_progress: 'done', done: 'not_started' };
 
 export default function ProjectDetailScreen() {
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
@@ -83,8 +82,8 @@ export default function ProjectDetailScreen() {
   };
 
   const cycleStatus = (task: SdpTask) => {
-    const next = NEXT_STATUS[task.status];
-    if (next === 'in_progress' && task.assignees.length === 0) {
+    const next: SdpTask['status'] = task.status === 'done' ? 'not_started' : 'done';
+    if (next === 'done' && task.assignees.length === 0) {
       setError(t('missingAssigneeBody', lang));
       return;
     }
