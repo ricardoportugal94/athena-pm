@@ -192,6 +192,7 @@ export async function createProject(name: string) {
 export type TaskUpdate = {
   status?: SdpTask['status'];
   assigneeId?: number | null;
+  applicable?: boolean;
   blocked?: boolean;
   blockerReason?: string;
   blockerOwner?: string;
@@ -226,6 +227,9 @@ export async function updateTask(taskId: string, update: TaskUpdate) {
     const rem = currentIds.filter((currentId) => currentId !== update.assigneeId);
     const add = update.assigneeId != null && !currentIds.includes(update.assigneeId) ? [update.assigneeId] : [];
     await cu('PUT', `/task/${taskId}`, { assignees: { add, rem } });
+  }
+  if (update.applicable !== undefined) {
+    await cu('POST', `/task/${taskId}/field/${clickupConfig.fields.applicable.id}`, { value: update.applicable });
   }
   if (update.blocked !== undefined) {
     await cu('POST', `/task/${taskId}/field/${clickupConfig.fields.blocked.id}`, { value: update.blocked });

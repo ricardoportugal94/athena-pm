@@ -104,6 +104,16 @@ export const strings = {
   },
   couldNotSave: { pt: 'Não foi possível guardar', en: 'Could not save' },
 
+  // Team: task details modal
+  taskDetailsTitle: { pt: 'Detalhes da tarefa', en: 'Task details' },
+  notApplicableLabel: { pt: 'Não aplicável a este projeto', en: 'Not applicable to this project' },
+  notApplicableBadge: { pt: 'N/A', en: 'N/A' },
+  blockedLabel: { pt: 'Bloqueada', en: 'Blocked' },
+  blockerReasonPlaceholder: { pt: 'Motivo do bloqueio', en: 'Blocker reason' },
+  blockerOwnerPlaceholder: { pt: 'Quem tem de desbloquear', en: 'Who needs to unblock this' },
+  blockerExpectedDatePlaceholder: { pt: 'Data prevista (AAAA-MM-DD)', en: 'Expected date (YYYY-MM-DD)' },
+  notesPlaceholder: { pt: 'Notas internas (não visíveis ao cliente)', en: 'Internal notes (not visible to the client)' },
+
   // Client-facing progress view
   clientTitle: { pt: 'Progresso do projeto', en: 'Project progress' },
   invalidLink: { pt: 'Link inválido ou expirado.', en: 'Invalid or expired link.' },
