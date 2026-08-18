@@ -123,8 +123,8 @@ export const strings = {
     en: 'When you open the file, Android will ask you to confirm "install from unknown source" — that\'s normal, this app isn\'t from the Play Store.',
   },
   downloadIphoneNote: {
-    pt: 'Tens iPhone? Este instalador é só para Android. Usa a versão web abrindo este mesmo endereço no Safari.',
-    en: "Have an iPhone? This installer is Android-only. Use the web version by opening this same address in Safari.",
+    pt: 'Tens iPhone? Este instalador é só para Android. Abre este mesmo endereço no Safari e toca em Partilhar → "Adicionar ao Ecrã Principal" para ficares com um ícone que abre como uma app.',
+    en: 'Have an iPhone? This installer is Android-only. Open this same address in Safari and tap Share → "Add to Home Screen" to get an icon that opens like an app.',
   },
 } as const;
 
