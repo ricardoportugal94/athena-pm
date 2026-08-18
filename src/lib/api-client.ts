@@ -11,7 +11,7 @@ export type ProjectWithStats = ProjectSummary & { done: number; total: number; p
 // Native builds have no "same origin" to call relative paths against — they
 // need the deployed server's absolute URL. Web keeps relative paths so local
 // `expo start --web` dev keeps hitting its own dev server.
-const API_BASE_URL = Platform.OS === 'web' ? '' : 'https://athena-pm-qwzv.onrender.com';
+const API_BASE_URL = Platform.OS === 'web' ? '' : 'https://72-62-237-99.sslip.io';
 
 async function request(path: string, opts: RequestInit & { token?: string | null } = {}) {
   const { token, headers, ...rest } = opts;
