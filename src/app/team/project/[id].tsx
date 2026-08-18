@@ -103,14 +103,28 @@ export default function ProjectDetailScreen() {
 
   const patchMany = async (taskIds: string[], update: Record<string, unknown>) => {
     applyLocalUpdate(taskIds, update);
-    try {
-      // Sequential, not Promise.all — firing every write at once has been
-      // flaky against the free-tier server, silently dropping one of them.
-      for (const taskId of taskIds) {
-        await api.updateTask(token, id, taskId, update);
+    // Sequential, not Promise.all — firing every write at once has been flaky
+    // against the free-tier server. Each task also gets its own retries and
+    // keeps going even if one fails, so a single flaky write can't silently
+    // leave the rest of the category unassigned.
+    const failedIds: string[] = [];
+    for (const taskId of taskIds) {
+      let ok = false;
+      for (let attempt = 0; attempt < 3 && !ok; attempt++) {
+        try {
+          await api.updateTask(token, id, taskId, update);
+          ok = true;
+        } catch {
+          // retry
+        }
       }
-    } catch (e: any) {
-      setError(e.message);
+      if (!ok) failedIds.push(taskId);
+    }
+    if (failedIds.length) {
+      const names = (tasks ?? [])
+        .filter((task) => failedIds.includes(task.clickupId))
+        .map((task) => taskName(task.seedId, task.name, lang));
+      setError(`${t('couldNotSave', lang)}: ${names.join(', ')}`);
       load();
     }
   };
