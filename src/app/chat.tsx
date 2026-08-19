@@ -85,18 +85,20 @@ export default function ChatScreen() {
           ))}
         </ScrollView>
 
-        <View style={styles.composer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Type a message…"
-            placeholderTextColor="#9A9A9A"
-            value={text}
-            onChangeText={setText}
-            multiline
-          />
-          <Pressable style={styles.sendButton} onPress={send} disabled={sending}>
-            <ThemedText style={styles.sendButtonText}>Send</ThemedText>
-          </Pressable>
+        <View style={styles.composerOuter}>
+          <View style={styles.composer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Type a message…"
+              placeholderTextColor="#9A9A9A"
+              value={text}
+              onChangeText={setText}
+              multiline
+            />
+            <Pressable style={styles.sendButton} onPress={send} disabled={sending}>
+              <ThemedText style={styles.sendButtonText}>Send</ThemedText>
+            </Pressable>
+          </View>
         </View>
       </SafeAreaView>
     </ThemedView>
@@ -117,7 +119,16 @@ const styles = StyleSheet.create({
   bubbleTheirs: { backgroundColor: '#F2F2F2', alignSelf: 'flex-start' },
   bubbleSender: { fontSize: 11, fontWeight: '700', color: '#6B6B6B', marginBottom: 2 },
   bubbleText: { color: '#1C1C1C', fontSize: 14 },
-  composer: { flexDirection: 'row', gap: Spacing.two, padding: Spacing.three, alignItems: 'flex-end' },
+  composerOuter: { borderTopWidth: 1, borderTopColor: '#F0F0F0' },
+  composer: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    padding: Spacing.three,
+    alignItems: 'flex-end',
+    maxWidth: 720,
+    alignSelf: 'center',
+    width: '100%',
+  },
   input: { flex: 1, backgroundColor: '#F2F2F2', color: '#1C1C1C', borderRadius: Radius.card * 0.7, padding: Spacing.three, fontSize: 14, maxHeight: 100 },
   sendButton: { backgroundColor: Brand.accent, borderRadius: Radius.pill, paddingVertical: Spacing.three, paddingHorizontal: Spacing.four, justifyContent: 'center' },
   sendButtonText: { color: Brand.ink, fontWeight: '800' },
