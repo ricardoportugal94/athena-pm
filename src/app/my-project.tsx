@@ -1,8 +1,9 @@
 import { Redirect, router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ChatFab } from '@/components/chat-fab';
 import { ProjectProgressView, type ClientTask, type ProjectNotes } from '@/components/project-progress-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -61,17 +62,14 @@ export default function MyProjectScreen() {
           tasks={tasks}
           notes={notes}
           headerRight={
-            <View style={styles.headerActions}>
-              <Pressable onPress={() => router.push('/chat')} style={styles.signOut}>
-                <ThemedText style={styles.signOutText}>💬 Chat</ThemedText>
-              </Pressable>
-              <Pressable onPress={signOut} style={styles.signOut}>
-                <ThemedText style={styles.signOutText}>Sign out</ThemedText>
-              </Pressable>
-            </View>
+            <Pressable onPress={signOut} style={styles.signOut}>
+              <ThemedText style={styles.signOutText}>Sign out</ThemedText>
+            </Pressable>
           }
         />
       </SafeAreaView>
+
+      <ChatFab onPress={() => router.push('/chat')} />
     </ThemedView>
   );
 }
@@ -80,7 +78,6 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   safeArea: { flex: 1 },
-  headerActions: { flexDirection: 'row', gap: 8 },
-  signOut: { alignSelf: 'flex-end', borderWidth: 1.5, borderColor: '#1C1C1C', borderRadius: 999, paddingVertical: 4, paddingHorizontal: 10 },
+  signOut: { alignSelf: 'flex-start', borderWidth: 1.5, borderColor: '#1C1C1C', borderRadius: 999, paddingVertical: 4, paddingHorizontal: 10 },
   signOutText: { color: '#1C1C1C', fontWeight: '700', fontSize: 12 },
 });

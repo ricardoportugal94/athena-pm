@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ActionSheet } from '@/components/action-sheet';
 import { CategoryCard } from '@/components/category-card';
+import { ChatFab } from '@/components/chat-fab';
 import { HeroPanel } from '@/components/hero-panel';
 import { computePoints, ProgressCard } from '@/components/progress-card';
 import { TaskDetailModal, type TaskDetailValue } from '@/components/task-detail-modal';
@@ -194,27 +195,19 @@ export default function ProjectDetailScreen() {
   return (
     <ThemedView style={styles.screen}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-        <HeroPanel
-          size="title"
-          title={name ?? 'Project'}
-          subtitle="THE SDP MATRIX"
-          right={
-            <View style={styles.heroActions}>
-              <Pressable onPress={() => router.push('/team')} style={styles.pillButton}>
-                <ThemedText style={styles.pillButtonText}>🏠 Home</ThemedText>
-              </Pressable>
-              <Pressable onPress={toggle} style={styles.pillButton}>
-                <ThemedText style={styles.pillButtonText}>{scheme === 'dark' ? '☀️' : '🌙'}</ThemedText>
-              </Pressable>
-              <Pressable onPress={shareWithClient} style={styles.pillButton}>
-                <ThemedText style={styles.pillButtonText}>Client link</ThemedText>
-              </Pressable>
-              <Pressable onPress={() => router.push({ pathname: '/team/project/chat/[id]', params: { id, name } })} style={styles.pillButton}>
-                <ThemedText style={styles.pillButtonText}>💬 Chat</ThemedText>
-              </Pressable>
-            </View>
-          }
-        />
+        <HeroPanel size="title" title={name ?? 'Project'} subtitle="THE SDP MATRIX">
+          <View style={styles.heroActions}>
+            <Pressable onPress={() => router.push('/team')} style={styles.pillButton}>
+              <ThemedText style={styles.pillButtonText}>🏠 Home</ThemedText>
+            </Pressable>
+            <Pressable onPress={toggle} style={styles.pillButton}>
+              <ThemedText style={styles.pillButtonText}>{scheme === 'dark' ? '☀️' : '🌙'}</ThemedText>
+            </Pressable>
+            <Pressable onPress={shareWithClient} style={styles.pillButton}>
+              <ThemedText style={styles.pillButtonText}>Client link</ThemedText>
+            </Pressable>
+          </View>
+        </HeroPanel>
 
         <ScrollView style={styles.scroll} contentContainerStyle={styles.body}>
           {tasks && <ProgressCard percent={percent} points={points} label="Complete" pointsLabel="points" />}
@@ -321,6 +314,8 @@ export default function ProjectDetailScreen() {
         onClose={() => setDetailTask(null)}
         onSave={(value) => detailTask && saveTaskDetail(detailTask, value)}
       />
+
+      <ChatFab onPress={() => router.push({ pathname: '/team/project/chat/[id]', params: { id, name } })} />
     </ThemedView>
   );
 }
