@@ -110,7 +110,16 @@ export default function TeamChatScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   safeArea: { flex: 1 },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.three, paddingTop: Spacing.two },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.three,
+    paddingTop: Spacing.two,
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
+  },
   topBarPill: { backgroundColor: '#1C1C1C', borderRadius: Radius.pill, paddingVertical: 6, paddingHorizontal: 14, flex: 1, marginRight: Spacing.two },
   topBarPillText: { color: '#FFFFFF', fontWeight: '700', fontSize: 13 },
   closeButton: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#1C1C1C', alignItems: 'center', justifyContent: 'center' },

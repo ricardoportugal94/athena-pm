@@ -131,6 +131,9 @@ const styles = StyleSheet.create({
     borderRadius: Radius.card,
     margin: Spacing.three,
     overflow: 'hidden',
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
     ...Shadow.card,
   },
   header: {
