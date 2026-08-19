@@ -5,7 +5,7 @@ export default function Root({ children }: { children: ReactNode }) {
   const { bodyAttributes, bodyNodes, htmlAttributes, headNodes } = useServerDocumentContext();
 
   return (
-    <html lang="pt" {...htmlAttributes}>
+    <html lang="en" {...htmlAttributes}>
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />

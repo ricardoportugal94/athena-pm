@@ -15,7 +15,7 @@ export async function PATCH(request: Request) {
   if (session instanceof Response) return session;
 
   const { taskId, ...update } = await request.json();
-  if (!taskId) return Response.json({ error: 'taskId é obrigatório.' }, { status: 400 });
+  if (!taskId) return Response.json({ error: 'taskId is required.' }, { status: 400 });
 
   try {
     await updateTask(taskId, update);

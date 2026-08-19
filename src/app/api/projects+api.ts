@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
   const { name } = await request.json();
   if (!name || typeof name !== 'string' || !name.trim()) {
-    return Response.json({ error: 'Nome do projeto é obrigatório.' }, { status: 400 });
+    return Response.json({ error: 'Project name is required.' }, { status: 400 });
   }
 
   const project = await createProject(name.trim());

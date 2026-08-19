@@ -24,7 +24,7 @@ async function request(path: string, opts: RequestInit & { token?: string | null
     },
   });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.error || `Erro ${res.status}`);
+  if (!res.ok) throw new Error(json.error || `Error ${res.status}`);
   return json;
 }
 
@@ -72,4 +72,22 @@ export const api = {
   getClientProject: (shareToken: string) => request(`/api/client-project/${shareToken}`),
 
   getMyProject: (token: string) => request('/api/my-project', { token }),
+
+  getProjectNotes: (token: string | null, projectId: string): Promise<Record<'general' | 'phase1' | 'phase2' | 'phase3', string>> =>
+    request(`/api/projects/${projectId}/notes`, { token }),
+
+  updateProjectNote: (token: string, projectId: string, scope: string, body: string) =>
+    request(`/api/projects/${projectId}/notes`, { method: 'PATCH', token, body: JSON.stringify({ scope, body }) }),
+
+  getChat: (
+    token: string | null,
+    projectId: string
+  ): Promise<{ responsible: { id: number; name: string } | null; messages: { senderRole: 'team' | 'client'; senderName: string; body: string; sentAt: string }[] }> =>
+    request(`/api/projects/${projectId}/chat`, { token }),
+
+  sendChatMessage: (token: string | null, projectId: string, text: string) =>
+    request(`/api/projects/${projectId}/chat`, { method: 'POST', token, body: JSON.stringify({ text }) }),
+
+  setChatResponsible: (token: string, projectId: string, memberId: number, memberName: string) =>
+    request(`/api/projects/${projectId}/chat-responsible`, { method: 'PATCH', token, body: JSON.stringify({ memberId, memberName }) }),
 };

@@ -7,7 +7,7 @@ export async function PATCH(request: Request, { id }: { id: string }) {
 
   const { name } = await request.json();
   if (!name || typeof name !== 'string' || !name.trim()) {
-    return Response.json({ error: 'Nome do projeto é obrigatório.' }, { status: 400 });
+    return Response.json({ error: 'Project name is required.' }, { status: 400 });
   }
 
   const project = await renameProject(id, name.trim());

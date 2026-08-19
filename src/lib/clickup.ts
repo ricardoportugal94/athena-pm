@@ -38,6 +38,7 @@ export type SdpTask = {
   status: 'not_started' | 'in_progress' | 'done';
   assignees: { id: number; username: string }[];
   applicable: boolean;
+  favorite: boolean;
   blocked: boolean;
   blockerReason: string | null;
   blockerOwner: string | null;
@@ -91,6 +92,7 @@ function mapTask(task: any): SdpTask {
     status: STATUS_BY_LABEL[task.status?.status] ?? 'not_started',
     assignees: (task.assignees ?? []).map((a: any) => ({ id: a.id, username: a.username })),
     applicable: fieldBoolean(task, clickupConfig.fields.applicable.id),
+    favorite: fieldBoolean(task, clickupConfig.fields.favorite.id),
     blocked: fieldBoolean(task, clickupConfig.fields.blocked.id),
     blockerReason: fieldValue(task, clickupConfig.fields.blockerReason.id),
     blockerOwner: fieldValue(task, clickupConfig.fields.blockerOwner.id),
@@ -193,6 +195,7 @@ export type TaskUpdate = {
   status?: SdpTask['status'];
   assigneeId?: number | null;
   applicable?: boolean;
+  favorite?: boolean;
   blocked?: boolean;
   blockerReason?: string;
   blockerOwner?: string;
@@ -211,7 +214,7 @@ export async function updateTask(taskId: string, update: TaskUpdate) {
   if (update.status === 'done') {
     const willHaveAssignee = update.assigneeId != null || (current.assignees ?? []).length > 0;
     if (!willHaveAssignee) {
-      throw new TaskUpdateError('Uma tarefa não pode ser marcada como concluída sem um responsável atribuído.');
+      throw new TaskUpdateError('A task cannot be marked done without an assignee.');
     }
   }
 
@@ -230,6 +233,9 @@ export async function updateTask(taskId: string, update: TaskUpdate) {
   }
   if (update.applicable !== undefined) {
     await cu('POST', `/task/${taskId}/field/${clickupConfig.fields.applicable.id}`, { value: update.applicable });
+  }
+  if (update.favorite !== undefined) {
+    await cu('POST', `/task/${taskId}/field/${clickupConfig.fields.favorite.id}`, { value: update.favorite });
   }
   if (update.blocked !== undefined) {
     await cu('POST', `/task/${taskId}/field/${clickupConfig.fields.blocked.id}`, { value: update.blocked });

@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   if (session instanceof Response) return session;
 
   const { listId } = await request.json();
-  if (!listId) return Response.json({ error: 'listId é obrigatório.' }, { status: 400 });
+  if (!listId) return Response.json({ error: 'listId is required.' }, { status: 400 });
 
   const project = await getProject(listId); // throws if it doesn't exist
   const token = signToken({ listId: project.id }, ONE_YEAR_MS);

@@ -6,7 +6,7 @@ import { verifyToken } from '@/lib/session';
 // stripped out (blockerOwner, blockerReason, notes).
 export async function GET(_request: Request, { token }: { token: string }) {
   const link = verifyToken<{ listId: string }>(token);
-  if (!link) return Response.json({ error: 'Link inválido ou expirado.' }, { status: 401 });
+  if (!link) return Response.json({ error: 'Invalid or expired link.' }, { status: 401 });
 
   const [project, tasks] = await Promise.all([getProject(link.listId), getProjectTasks(link.listId)]);
   return Response.json({ project: { name: project.name }, tasks: toSafeClientView(tasks) });

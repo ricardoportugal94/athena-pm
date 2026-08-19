@@ -50,12 +50,12 @@ function sessionFromRequest(request: Request): Session | null {
 
 export function requireAuth(request: Request): Session | Response {
   const session = sessionFromRequest(request);
-  if (!session) return Response.json({ error: 'Não autenticado.' }, { status: 401 });
+  if (!session) return Response.json({ error: 'Not authenticated.' }, { status: 401 });
   return session;
 }
 
 export function requireAdmin(request: Request): AdminSession | Response {
   const session = sessionFromRequest(request);
-  if (!session || session.role !== 'admin') return Response.json({ error: 'Acesso restrito à equipa.' }, { status: 403 });
+  if (!session || session.role !== 'admin') return Response.json({ error: 'Team access only.' }, { status: 403 });
   return session;
 }

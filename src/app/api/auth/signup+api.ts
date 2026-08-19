@@ -12,22 +12,22 @@ const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 export async function POST(request: Request) {
   const { email, password, projectId, newProjectName } = await request.json();
   if (!email || !password || (!projectId && !newProjectName)) {
-    return Response.json({ error: 'Email, password e projeto (existente ou novo) são obrigatórios.' }, { status: 400 });
+    return Response.json({ error: 'Email, password, and a project (existing or new) are required.' }, { status: 400 });
   }
   if (password.length < 8) {
-    return Response.json({ error: 'A password precisa de pelo menos 8 caracteres.' }, { status: 400 });
+    return Response.json({ error: 'Password must be at least 8 characters.' }, { status: 400 });
   }
 
   const existingAccount = await findAccountByEmail(email);
-  if (existingAccount) return Response.json({ error: 'Já existe uma conta com este email.' }, { status: 409 });
+  if (existingAccount) return Response.json({ error: 'An account with this email already exists.' }, { status: 409 });
 
   let project;
   if (projectId) {
     project = await getProject(projectId).catch(() => null);
-    if (!project) return Response.json({ error: 'Projeto inválido.' }, { status: 400 });
+    if (!project) return Response.json({ error: 'Invalid project.' }, { status: 400 });
   } else {
     const name = String(newProjectName).trim();
-    if (!name) return Response.json({ error: 'Nome do projeto é obrigatório.' }, { status: 400 });
+    if (!name) return Response.json({ error: 'Project name is required.' }, { status: 400 });
     // Defensive: don't create a duplicate if one with this exact name already exists.
     const exactMatch = (await searchProjectsByName(name)).find((p) => p.name.toLowerCase() === name.toLowerCase());
     project = exactMatch ?? (await createProject(name));

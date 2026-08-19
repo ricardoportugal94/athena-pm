@@ -10,15 +10,12 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
-import { useLanguage } from '@/hooks/use-language';
-import { t } from '@/i18n';
 import { api } from '@/lib/api-client';
 
 type ClientAccountRow = { taskId: string; email: string; projectId: string; projectName: string };
 
 export default function ClientsScreen() {
   const { stored } = useAuth();
-  const { lang } = useLanguage();
   const token = stored!.token;
 
   const [accounts, setAccounts] = useState<ClientAccountRow[] | null>(null);
@@ -64,11 +61,11 @@ export default function ClientsScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <HeroPanel
           size="title"
-          title={t('clientsTitle', lang)}
-          subtitle={t('sdpMatrix', lang)}
+          title="Clients"
+          subtitle="THE SDP MATRIX"
           right={
             <Pressable onPress={() => router.push('/team')} style={styles.pillButton}>
-              <ThemedText style={styles.pillButtonText}>{t('homeButton', lang)}</ThemedText>
+              <ThemedText style={styles.pillButtonText}>🏠 Home</ThemedText>
             </Pressable>
           }
         />
@@ -91,44 +88,44 @@ export default function ClientsScreen() {
                 </View>
                 <View style={styles.actions}>
                   <Pressable onPress={() => setResetTarget(item)} style={styles.resetButton}>
-                    <ThemedText style={styles.resetButtonText}>{t('resetPasswordAction', lang)}</ThemedText>
+                    <ThemedText style={styles.resetButtonText}>Reset password</ThemedText>
                   </Pressable>
                   <Pressable onPress={() => setDeleteTarget(item)} style={styles.deleteButton}>
-                    <ThemedText style={styles.deleteButtonText}>{t('deleteAction', lang)}</ThemedText>
+                    <ThemedText style={styles.deleteButtonText}>Delete</ThemedText>
                   </Pressable>
                 </View>
               </View>
             )}
-            ListEmptyComponent={accounts ? <ThemedText themeColor="textSecondary">{t('noClientsYet', lang)}</ThemedText> : null}
+            ListEmptyComponent={accounts ? <ThemedText themeColor="textSecondary">No registered clients yet.</ThemedText> : null}
           />
         </ThemedView>
       </SafeAreaView>
 
       <ActionSheet
         visible={!!resetTarget}
-        title={t('confirmResetTitle', lang)}
-        message={resetTarget ? `${resetTarget.email} — ${t('confirmResetBody', lang)}` : undefined}
-        cancelLabel={t('cancel', lang)}
+        title="Reset password?"
+        message={resetTarget ? `${resetTarget.email} — The current password stops working. You'll get a new temporary password to give the client.` : undefined}
+        cancelLabel="Cancel"
         onCancel={() => setResetTarget(null)}
-        options={resetTarget ? [{ label: t('resetPasswordAction', lang), destructive: true, onPress: () => doReset(resetTarget) }] : []}
+        options={resetTarget ? [{ label: 'Reset password', destructive: true, onPress: () => doReset(resetTarget) }] : []}
       />
 
       <ActionSheet
         visible={!!resetResult}
-        title={t('newPasswordTitle', lang)}
-        message={resetResult ? `${resetResult.email}\n\n${resetResult.tempPassword}\n\n${t('newPasswordHint', lang)}` : undefined}
-        cancelLabel={t('close', lang)}
+        title="New temporary password"
+        message={resetResult ? `${resetResult.email}\n\n${resetResult.tempPassword}\n\nCopy and send this password to the client — it won't be shown again.` : undefined}
+        cancelLabel="Close"
         onCancel={() => setResetResult(null)}
-        options={resetResult ? [{ label: copied ? t('passwordCopied', lang) : t('copyPassword', lang), onPress: copyPassword }] : []}
+        options={resetResult ? [{ label: copied ? 'Copied!' : 'Copy password', onPress: copyPassword }] : []}
       />
 
       <ActionSheet
         visible={!!deleteTarget}
-        title={t('confirmDeleteClientTitle', lang)}
-        message={deleteTarget ? `${deleteTarget.email} — ${t('confirmDeleteClientBody', lang)}` : undefined}
-        cancelLabel={t('cancel', lang)}
+        title="Delete client?"
+        message={deleteTarget ? `${deleteTarget.email} — Deletes the client's account. The project and its tasks in ClickUp are not affected.` : undefined}
+        cancelLabel="Cancel"
         onCancel={() => setDeleteTarget(null)}
-        options={deleteTarget ? [{ label: t('deleteAction', lang), destructive: true, onPress: () => doDelete(deleteTarget) }] : []}
+        options={deleteTarget ? [{ label: 'Delete', destructive: true, onPress: () => doDelete(deleteTarget) }] : []}
       />
     </ThemedView>
   );

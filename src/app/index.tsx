@@ -9,9 +9,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
-import { useLanguage } from '@/hooks/use-language';
 import { useThemeToggle } from '@/hooks/use-theme';
-import { t, type Lang } from '@/i18n';
 import { api, type ProjectSummary } from '@/lib/api-client';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -24,7 +22,6 @@ type Mode = 'start' | 'signup' | 'login';
 export default function LoginScreen() {
   const { stored, loading, signIn } = useAuth();
   const { scheme, toggle } = useThemeToggle();
-  const { lang, setLang } = useLanguage();
   const [mode, setMode] = useState<Mode>('start');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -53,7 +50,7 @@ export default function LoginScreen() {
         .catch((e) => setError(e.message))
         .finally(() => setSubmitting(false));
     } else if (response?.type === 'error') {
-      setError(t('googleLoginFailed', lang));
+      setError('Could not sign in with Google.');
     }
   }, [response]);
 
@@ -63,44 +60,36 @@ export default function LoginScreen() {
   return (
     <ThemedView style={styles.screen}>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.langSwitch}>
-          {(['pt', 'en'] as Lang[]).map((l) => (
-            <Pressable key={l} onPress={() => setLang(l)} style={[styles.langChip, lang === l && styles.langChipOn]}>
-              <ThemedText style={lang === l ? styles.langChipOnText : styles.langChipText}>{l.toUpperCase()}</ThemedText>
-            </Pressable>
-          ))}
-        </View>
-
         <ThemedView style={styles.card}>
           <ThemedText type="wordmark" style={styles.wordmark}>
             ATHENA
           </ThemedText>
-          <ThemedText style={styles.subtitle}>{t('sdpMatrix', lang)}</ThemedText>
+          <ThemedText style={styles.subtitle}>THE SDP MATRIX</ThemedText>
 
           {mode === 'start' && (
             <>
               <Pressable style={styles.googleButton} disabled={!request || submitting} onPress={() => promptAsync()}>
-                {submitting ? <ActivityIndicator color={Brand.ink} /> : <ThemedText style={styles.googleButtonText}>{t('loginWithGoogle', lang)}</ThemedText>}
+                {submitting ? <ActivityIndicator color={Brand.ink} /> : <ThemedText style={styles.googleButtonText}>LOG IN WITH GOOGLE</ThemedText>}
               </Pressable>
-              <ThemedText style={styles.hint}>{t('adminDomainHint', lang)}</ThemedText>
+              <ThemedText style={styles.hint}>Only @rstivali.pt accounts can sign in as team.</ThemedText>
 
               <Pressable style={styles.googleButton} onPress={() => setMode('login')}>
-                <ThemedText style={styles.googleButtonText}>{t('alreadyClientLink', lang)}</ThemedText>
+                <ThemedText style={styles.googleButtonText}>I already have a client account</ThemedText>
               </Pressable>
 
               <Pressable onPress={() => setMode('signup')}>
-                <ThemedText style={styles.link}>{t('createAccountLink', lang)}</ThemedText>
+                <ThemedText style={styles.link}>Sign up</ThemedText>
               </Pressable>
             </>
           )}
 
-          {mode === 'signup' && <SignupForm lang={lang} onBack={() => setMode('start')} onDone={signIn} />}
-          {mode === 'login' && <LoginForm lang={lang} onBack={() => setMode('start')} onDone={signIn} />}
+          {mode === 'signup' && <SignupForm onBack={() => setMode('start')} onDone={signIn} />}
+          {mode === 'login' && <LoginForm onBack={() => setMode('start')} onDone={signIn} />}
 
           {error && <ThemedText style={styles.error}>{error}</ThemedText>}
 
           <Pressable onPress={toggle} style={styles.darkModeRow}>
-            <ThemedText style={styles.darkModeText}>{scheme === 'dark' ? `☀️ ${t('lightMode', lang)}` : `🌙 ${t('darkMode', lang)}`}</ThemedText>
+            <ThemedText style={styles.darkModeText}>{scheme === 'dark' ? '☀️ LIGHT MODE' : '🌙 DARK MODE'}</ThemedText>
           </Pressable>
         </ThemedView>
       </SafeAreaView>
@@ -108,7 +97,7 @@ export default function LoginScreen() {
   );
 }
 
-function SignupForm({ lang, onBack, onDone }: { lang: Lang; onBack: () => void; onDone: (r: any) => void }) {
+function SignupForm({ onBack, onDone }: { onBack: () => void; onDone: (r: any) => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [query, setQuery] = useState('');
@@ -125,7 +114,7 @@ function SignupForm({ lang, onBack, onDone }: { lang: Lang; onBack: () => void; 
   }, [query, selected, creatingNewName]);
 
   const submit = async () => {
-    if (!selected && !creatingNewName) return setError(t('chooseOrCreateError', lang));
+    if (!selected && !creatingNewName) return setError('Choose your project or create a new one.');
     setSubmitting(true);
     setError(null);
     try {
@@ -142,12 +131,12 @@ function SignupForm({ lang, onBack, onDone }: { lang: Lang; onBack: () => void; 
 
   return (
     <View style={styles.form}>
-      <TextInput placeholderTextColor="#9A9A9A" style={styles.input} placeholder={t('emailPlaceholder', lang)} autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
-      <TextInput placeholderTextColor="#9A9A9A" style={styles.input} placeholder={t('passwordMinPlaceholder', lang)} secureTextEntry value={password} onChangeText={setPassword} />
+      <TextInput placeholderTextColor="#9A9A9A" style={styles.input} placeholder="Email" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
+      <TextInput placeholderTextColor="#9A9A9A" style={styles.input} placeholder="Password (min. 8 characters)" secureTextEntry value={password} onChangeText={setPassword} />
       <TextInput
         placeholderTextColor="#9A9A9A"
         style={styles.input}
-        placeholder={t('projectNamePlaceholder', lang)}
+        placeholder="Your project/brand name…"
         value={fieldValue}
         onChangeText={(v) => {
           setSelected(null);
@@ -164,30 +153,30 @@ function SignupForm({ lang, onBack, onDone }: { lang: Lang; onBack: () => void; 
           ))}
           <Pressable onPress={() => setCreatingNewName(query.trim())} style={styles.resultRowNew}>
             <ThemedText style={styles.resultRowNewText}>
-              {t('createNewProjectPrefix', lang)} "{query.trim()}"
+              + Create new project "{query.trim()}"
             </ThemedText>
           </Pressable>
         </ThemedView>
       )}
       {creatingNewName && (
         <ThemedText style={styles.newProjectHint}>
-          {t('willCreateProject', lang)} "{creatingNewName}" {t('with73Tasks', lang)}
+          This will create the project "{creatingNewName}" with all 73 tasks.
         </ThemedText>
       )}
 
       {error && <ThemedText style={styles.error}>{error}</ThemedText>}
 
       <Pressable style={styles.button} onPress={submit} disabled={submitting}>
-        {submitting ? <ActivityIndicator color={Brand.ink} /> : <ThemedText style={styles.buttonText}>{t('signUpButton', lang)}</ThemedText>}
+        {submitting ? <ActivityIndicator color={Brand.ink} /> : <ThemedText style={styles.buttonText}>SIGN UP</ThemedText>}
       </Pressable>
       <Pressable onPress={onBack} style={styles.backLink}>
-        <ThemedText style={styles.link}>{t('back', lang)}</ThemedText>
+        <ThemedText style={styles.link}>← Back</ThemedText>
       </Pressable>
     </View>
   );
 }
 
-function LoginForm({ lang, onBack, onDone }: { lang: Lang; onBack: () => void; onDone: (r: any) => void }) {
+function LoginForm({ onBack, onDone }: { onBack: () => void; onDone: (r: any) => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -209,22 +198,22 @@ function LoginForm({ lang, onBack, onDone }: { lang: Lang; onBack: () => void; o
 
   return (
     <View style={styles.form}>
-      <TextInput placeholderTextColor="#9A9A9A" style={styles.input} placeholder={t('emailPlaceholder', lang)} autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
-      <TextInput placeholderTextColor="#9A9A9A" style={styles.input} placeholder={t('passwordPlaceholder', lang)} secureTextEntry value={password} onChangeText={setPassword} />
+      <TextInput placeholderTextColor="#9A9A9A" style={styles.input} placeholder="Email" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
+      <TextInput placeholderTextColor="#9A9A9A" style={styles.input} placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
 
       {error && <ThemedText style={styles.error}>{error}</ThemedText>}
 
       <Pressable style={styles.button} onPress={submit} disabled={submitting}>
-        {submitting ? <ActivityIndicator color={Brand.ink} /> : <ThemedText style={styles.buttonText}>{t('logInButton', lang)}</ThemedText>}
+        {submitting ? <ActivityIndicator color={Brand.ink} /> : <ThemedText style={styles.buttonText}>LOG IN</ThemedText>}
       </Pressable>
 
       <Pressable onPress={() => setShowForgot((v) => !v)} style={styles.backLink}>
-        <ThemedText style={styles.link}>{t('forgotPasswordLink', lang)}</ThemedText>
+        <ThemedText style={styles.link}>Forgot password</ThemedText>
       </Pressable>
-      {showForgot && <ThemedText style={styles.forgotHint}>{t('forgotPasswordBody', lang)}</ThemedText>}
+      {showForgot && <ThemedText style={styles.forgotHint}>Contact the Portugal Production team to have your password reset.</ThemedText>}
 
       <Pressable onPress={onBack} style={styles.backLink}>
-        <ThemedText style={styles.link}>{t('back', lang)}</ThemedText>
+        <ThemedText style={styles.link}>← Back</ThemedText>
       </Pressable>
     </View>
   );
@@ -233,11 +222,6 @@ function LoginForm({ lang, onBack, onDone }: { lang: Lang; onBack: () => void; o
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   safeArea: { flex: 1, padding: Spacing.four, justifyContent: 'center', maxWidth: 480, alignSelf: 'center', width: '100%', gap: Spacing.two },
-  langSwitch: { flexDirection: 'row', gap: Spacing.one, backgroundColor: 'rgba(0,0,0,0.08)', borderRadius: Radius.pill, padding: 3, alignSelf: 'center' },
-  langChip: { paddingVertical: 4, paddingHorizontal: 12, borderRadius: Radius.pill },
-  langChipText: { color: '#2B2E33' },
-  langChipOn: { backgroundColor: Brand.ink },
-  langChipOnText: { color: Brand.accent },
   card: { backgroundColor: '#FFFFFF', borderRadius: Radius.card * 1.5, padding: Spacing.five, alignItems: 'center', gap: Spacing.three, ...Shadow.card },
   wordmark: { color: '#111111', textAlign: 'center' },
   subtitle: { color: '#8A8A8A', fontSize: 12, fontWeight: '700', letterSpacing: 2, marginTop: -Spacing.two, marginBottom: Spacing.two },

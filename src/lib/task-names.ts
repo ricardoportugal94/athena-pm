@@ -5,7 +5,7 @@
 // tasks-template.json were themselves translated FROM this English original,
 // so this is the authoritative source, not a re-translation.
 
-export const taskNameEn: Record<string, string> = {
+export const TASK_NAME_EN: Record<string, string> = {
   T001: 'Upper/outer materials (leather, fabrics, synthetics, biomaterials, laces, velcros, elastics)',
   T002: 'Lining materials (leather, fabrics, synthetics, biomaterials)',
   T003: 'Reinforcements, paddings, foamings and trims',
@@ -82,7 +82,22 @@ export const taskNameEn: Record<string, string> = {
   T073: 'Shipping',
 };
 
-export function taskName(seedId: string | null, ptName: string, lang: 'pt' | 'en'): string {
-  if (lang === 'en' && seedId && taskNameEn[seedId]) return taskNameEn[seedId];
-  return ptName;
+export function englishTaskName(seedId: string | null, fallbackName: string): string {
+  if (seedId && TASK_NAME_EN[seedId]) return TASK_NAME_EN[seedId];
+  return fallbackName;
 }
+
+export const CATEGORY_LABEL_EN: Record<string, string> = {
+  Materiais: 'Materials',
+  'Componentes e Ferragens': 'Components & Hardware',
+  Fornecedores: 'Suppliers',
+  Fabricante: 'Manufacturer',
+  Prototipagem: 'Prototyping',
+  'Correções': 'Corrections',
+  'Amostras de Confirmação': 'Confirmation Samples',
+  'Encomenda e Calendário de Produção': 'Production Order & Schedule',
+  '2ª Amostra': '2nd Sample',
+  'Ferramentas e Gradação': 'Tooling & Grading',
+  'Ensaio de Produção': 'Production Trial',
+  'Produção em Massa': 'Mass Production',
+};

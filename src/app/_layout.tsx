@@ -11,7 +11,6 @@ import { useEffect } from 'react';
 
 import { AppThemeProvider } from '@/hooks/use-theme';
 import { AuthProvider } from '@/hooks/use-auth';
-import { LanguageProvider } from '@/hooks/use-language';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -32,11 +31,9 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={DefaultTheme}>
       <AppThemeProvider>
-        <LanguageProvider>
-          <AuthProvider>
-            <Stack screenOptions={{ headerShown: false }} />
-          </AuthProvider>
-        </LanguageProvider>
+        <AuthProvider>
+          <Stack screenOptions={{ headerShown: false }} />
+        </AuthProvider>
       </AppThemeProvider>
     </ThemeProvider>
   );

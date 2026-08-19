@@ -1,21 +1,19 @@
-import { Redirect } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ProjectProgressView, type ClientTask } from '@/components/project-progress-view';
+import { ProjectProgressView, type ClientTask, type ProjectNotes } from '@/components/project-progress-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/hooks/use-auth';
-import { useLanguage } from '@/hooks/use-language';
-import { t } from '@/i18n';
 import { api } from '@/lib/api-client';
 
 export default function MyProjectScreen() {
   const { stored, loading, signOut } = useAuth();
-  const { lang, setLang } = useLanguage();
   const [projectName, setProjectName] = useState<string | null>(null);
   const [tasks, setTasks] = useState<ClientTask[] | null>(null);
+  const [notes, setNotes] = useState<ProjectNotes | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -27,6 +25,9 @@ export default function MyProjectScreen() {
         setTasks(r.tasks);
       })
       .catch((e) => setError(e.message));
+    if (stored.session.role === 'client') {
+      api.getProjectNotes(stored.token, stored.session.projectId).then(setNotes).catch(() => {});
+    }
   }, [stored]);
 
   if (loading) return null;
@@ -46,7 +47,7 @@ export default function MyProjectScreen() {
     return (
       <ThemedView style={styles.screen}>
         <SafeAreaView style={styles.centered}>
-          <ThemedText>{t('loading', lang)}</ThemedText>
+          <ThemedText>Loading…</ThemedText>
         </SafeAreaView>
       </ThemedView>
     );
@@ -58,12 +59,16 @@ export default function MyProjectScreen() {
         <ProjectProgressView
           projectName={projectName}
           tasks={tasks}
-          lang={lang}
-          onChangeLang={setLang}
+          notes={notes}
           headerRight={
-            <Pressable onPress={signOut} style={styles.signOut}>
-              <ThemedText style={styles.signOutText}>{t('signOut', lang)}</ThemedText>
-            </Pressable>
+            <View style={styles.headerActions}>
+              <Pressable onPress={() => router.push('/chat')} style={styles.signOut}>
+                <ThemedText style={styles.signOutText}>💬 Chat</ThemedText>
+              </Pressable>
+              <Pressable onPress={signOut} style={styles.signOut}>
+                <ThemedText style={styles.signOutText}>Sign out</ThemedText>
+              </Pressable>
+            </View>
           }
         />
       </SafeAreaView>
@@ -75,6 +80,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   safeArea: { flex: 1 },
+  headerActions: { flexDirection: 'row', gap: 8 },
   signOut: { alignSelf: 'flex-end', borderWidth: 1.5, borderColor: '#1C1C1C', borderRadius: 999, paddingVertical: 4, paddingHorizontal: 10 },
   signOutText: { color: '#1C1C1C', fontWeight: '700', fontSize: 12 },
 });

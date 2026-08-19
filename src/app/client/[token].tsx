@@ -6,13 +6,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProjectProgressView, type ClientTask } from '@/components/project-progress-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { useLanguage } from '@/hooks/use-language';
-import { t } from '@/i18n';
 import { api } from '@/lib/api-client';
 
 export default function ClientProjectScreen() {
   const { token } = useLocalSearchParams<{ token: string }>();
-  const { lang, setLang } = useLanguage();
   const [projectName, setProjectName] = useState<string | null>(null);
   const [tasks, setTasks] = useState<ClientTask[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +21,7 @@ export default function ClientProjectScreen() {
         setProjectName(r.project.name);
         setTasks(r.tasks);
       })
-      .catch(() => setError(t('invalidLink', lang)));
+      .catch(() => setError('Invalid or expired link.'));
   }, [token]);
 
   if (error) {
@@ -41,7 +38,7 @@ export default function ClientProjectScreen() {
     return (
       <ThemedView style={styles.screen}>
         <SafeAreaView style={styles.centered}>
-          <ThemedText>{t('loading', lang)}</ThemedText>
+          <ThemedText>Loading…</ThemedText>
         </SafeAreaView>
       </ThemedView>
     );
@@ -50,7 +47,7 @@ export default function ClientProjectScreen() {
   return (
     <ThemedView style={styles.screen}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-        <ProjectProgressView projectName={projectName} tasks={tasks} lang={lang} onChangeLang={setLang} />
+        <ProjectProgressView projectName={projectName} tasks={tasks} />
       </SafeAreaView>
     </ThemedView>
   );

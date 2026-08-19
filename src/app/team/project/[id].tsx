@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ActionSheet } from '@/components/action-sheet';
@@ -12,11 +12,11 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, PhaseColors, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
-import { useLanguage } from '@/hooks/use-language';
 import { useThemeToggle } from '@/hooks/use-theme';
-import { categoryLabel, phaseLabel, t } from '@/i18n';
-import { taskName } from '@/i18n/task-names';
 import { api, type TeamMember } from '@/lib/api-client';
+import { CATEGORY_LABEL_EN, englishTaskName } from '@/lib/task-names';
+
+const PHASE_LABEL_EN: Record<number, string> = { 1: '1. Prepare', 2: '2. Test', 3: '3. Make' };
 
 type SdpTask = {
   clickupId: string;
@@ -29,6 +29,7 @@ type SdpTask = {
   status: 'not_started' | 'in_progress' | 'done';
   assignees: { id: number; username: string }[];
   applicable: boolean;
+  favorite: boolean;
   blocked: boolean;
   blockerReason: string | null;
   blockerOwner: string | null;
@@ -36,14 +37,13 @@ type SdpTask = {
   notes: string | null;
 };
 
-const STATUS_ICON: Record<SdpTask['status'], string> = { not_started: '○', in_progress: '◐', done: '●' };
-const STATUS_COLOR: Record<SdpTask['status'], string> = { not_started: '#B8BCC4', in_progress: '#5f55ee', done: '#0f9d9f' };
+type ProjectNotesState = { general: string; phase1: string; phase2: string; phase3: string };
+const PHASE_NOTE_KEY: Record<number, keyof ProjectNotesState> = { 1: 'phase1', 2: 'phase2', 3: 'phase3' };
 
 export default function ProjectDetailScreen() {
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
   const { stored } = useAuth();
   const { scheme, toggle } = useThemeToggle();
-  const { lang } = useLanguage();
   const token = stored!.token;
 
   const [tasks, setTasks] = useState<SdpTask[] | null>(null);
@@ -54,6 +54,7 @@ export default function ProjectDetailScreen() {
   // task in a category from the category-header chip (one owner per list).
   const [assigneeContext, setAssigneeContext] = useState<SdpTask[] | null>(null);
   const [detailTask, setDetailTask] = useState<SdpTask | null>(null);
+  const [notes, setNotes] = useState<ProjectNotesState>({ general: '', phase1: '', phase2: '', phase3: '' });
 
   const load = useCallback(() => {
     api.getProjectTasks(token, id).then((r) => setTasks(r.tasks)).catch((e) => setError(e.message));
@@ -63,6 +64,13 @@ export default function ProjectDetailScreen() {
   useEffect(() => {
     api.teamMembers(token).then(setMembers);
   }, []);
+  useEffect(() => {
+    api.getProjectNotes(token, id).then(setNotes).catch(() => {});
+  }, [token, id]);
+
+  const saveNote = (scope: keyof ProjectNotesState, body: string) => {
+    api.updateProjectNote(token, id, scope, body).catch((e: any) => setError(e.message));
+  };
 
   // Optimistic: update the screen immediately instead of re-fetching all 73
   // tasks after every tap — only re-fetch (to resync with the real state) if
@@ -75,6 +83,7 @@ export default function ProjectDetailScreen() {
             const next = { ...task };
             if ('status' in update) next.status = update.status as SdpTask['status'];
             if ('applicable' in update) next.applicable = update.applicable as boolean;
+            if ('favorite' in update) next.favorite = update.favorite as boolean;
             if ('blocked' in update) next.blocked = update.blocked as boolean;
             if ('blockerReason' in update) next.blockerReason = update.blockerReason as string;
             if ('blockerOwner' in update) next.blockerOwner = update.blockerOwner as string;
@@ -123,8 +132,8 @@ export default function ProjectDetailScreen() {
     if (failedIds.length) {
       const names = (tasks ?? [])
         .filter((task) => failedIds.includes(task.clickupId))
-        .map((task) => taskName(task.seedId, task.name, lang));
-      setError(`${t('couldNotSave', lang)}: ${names.join(', ')}`);
+        .map((task) => englishTaskName(task.seedId, task.name));
+      setError(`Could not save: ${names.join(', ')}`);
       load();
     }
   };
@@ -132,20 +141,20 @@ export default function ProjectDetailScreen() {
   const categoryAssigneeLabel = (catTasks: SdpTask[]) => {
     const assigned = catTasks.map((task) => task.assignees[0]).filter(Boolean) as { id: number; username: string }[];
     const uniqueIds = new Set(assigned.map((a) => a.id));
-    return uniqueIds.size === 1 ? assigned[0].username : t('whoPlaceholder', lang);
+    return uniqueIds.size === 1 ? assigned[0].username : '+ Who?';
   };
 
   const cycleStatus = (task: SdpTask) => {
     const next: SdpTask['status'] = task.status === 'done' ? 'not_started' : 'done';
     if (next === 'done' && task.assignees.length === 0) {
-      setError(t('missingAssigneeBody', lang));
+      setError('Assign someone to this category before marking the task as done.');
       return;
     }
     setError(null);
     patch(task.clickupId, { status: next });
   };
 
-  const toggleBlocked = (task: SdpTask) => patch(task.clickupId, { blocked: !task.blocked });
+  const toggleFavorite = (task: SdpTask) => patch(task.clickupId, { favorite: !task.favorite });
 
   const saveTaskDetail = (task: SdpTask, value: TaskDetailValue) => {
     setDetailTask(null);
@@ -173,9 +182,9 @@ export default function ProjectDetailScreen() {
       }
       const applicableTasks = phaseTasks.filter((t) => t.applicable);
       const done = applicableTasks.filter((t) => t.status === 'done').length;
-      return { phase, title: `${t('phaseWord', lang)} ${phaseLabel[phase][lang]}`, categories, done, total: applicableTasks.length };
+      return { phase, title: `Phase ${PHASE_LABEL_EN[phase]}`, categories, done, total: applicableTasks.length };
     });
-  }, [tasks, lang]);
+  }, [tasks]);
 
   const totalDone = phases.reduce((s, p) => s + p.done, 0);
   const totalCount = phases.reduce((s, p) => s + p.total, 0);
@@ -187,27 +196,40 @@ export default function ProjectDetailScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <HeroPanel
           size="title"
-          title={name ?? 'Projeto'}
-          subtitle={t('sdpMatrix', lang)}
+          title={name ?? 'Project'}
+          subtitle="THE SDP MATRIX"
           right={
             <View style={styles.heroActions}>
               <Pressable onPress={() => router.push('/team')} style={styles.pillButton}>
-                <ThemedText style={styles.pillButtonText}>{t('homeButton', lang)}</ThemedText>
+                <ThemedText style={styles.pillButtonText}>🏠 Home</ThemedText>
               </Pressable>
               <Pressable onPress={toggle} style={styles.pillButton}>
                 <ThemedText style={styles.pillButtonText}>{scheme === 'dark' ? '☀️' : '🌙'}</ThemedText>
               </Pressable>
               <Pressable onPress={shareWithClient} style={styles.pillButton}>
-                <ThemedText style={styles.pillButtonText}>{t('clientLinkButton', lang)}</ThemedText>
+                <ThemedText style={styles.pillButtonText}>Client link</ThemedText>
+              </Pressable>
+              <Pressable onPress={() => router.push({ pathname: '/team/project/chat/[id]', params: { id, name } })} style={styles.pillButton}>
+                <ThemedText style={styles.pillButtonText}>💬 Chat</ThemedText>
               </Pressable>
             </View>
           }
         />
 
         <ScrollView style={styles.scroll} contentContainerStyle={styles.body}>
-          {tasks && <ProgressCard percent={percent} points={points} label={t('completeLabel', lang)} pointsLabel={t('pointsWord', lang)} />}
+          {tasks && <ProgressCard percent={percent} points={points} label="Complete" pointsLabel="points" />}
           {shareUrl && <ThemedText selectable style={styles.shareUrl}>{shareUrl}</ThemedText>}
           {error && <ThemedText style={styles.error}>{error}</ThemedText>}
+
+          <TextInput
+            style={styles.noteInput}
+            placeholder="Project notes (visible to the client)…"
+            placeholderTextColor="#9A9A9A"
+            value={notes.general}
+            onChangeText={(v) => setNotes((prev) => ({ ...prev, general: v }))}
+            onBlur={() => saveNote('general', notes.general)}
+            multiline
+          />
 
           {phases.map((p) => (
             <View key={p.phase} style={styles.phaseBlock}>
@@ -216,12 +238,21 @@ export default function ProjectDetailScreen() {
                   {p.title}
                 </ThemedText>
               </View>
-              <ThemedText style={styles.phaseSub}>{p.done}/{p.total} {t('tasksWord', lang)}</ThemedText>
+              <ThemedText style={styles.phaseSub}>{p.done}/{p.total} tasks</ThemedText>
+              <TextInput
+                style={styles.noteInput}
+                placeholder={`Notes for this phase (visible to the client)…`}
+                placeholderTextColor="#9A9A9A"
+                value={notes[PHASE_NOTE_KEY[p.phase]]}
+                onChangeText={(v) => setNotes((prev) => ({ ...prev, [PHASE_NOTE_KEY[p.phase]]: v }))}
+                onBlur={() => saveNote(PHASE_NOTE_KEY[p.phase], notes[PHASE_NOTE_KEY[p.phase]])}
+                multiline
+              />
 
               {p.categories.map((cat) => (
                 <CategoryCard
                   key={cat.name}
-                  name={categoryLabel[cat.name]?.[lang] ?? cat.name}
+                  name={CATEGORY_LABEL_EN[cat.name] ?? cat.name}
                   done={cat.tasks.filter((t) => t.applicable && t.status === 'done').length}
                   total={cat.tasks.filter((t) => t.applicable).length}
                   assigneeLabel={categoryAssigneeLabel(cat.tasks)}
@@ -230,19 +261,21 @@ export default function ProjectDetailScreen() {
                   {cat.tasks.map((task) => (
                     <View key={task.clickupId} style={[styles.taskRow, task.blocked && styles.taskRowBlocked, !task.applicable && styles.taskRowNotApplicable]}>
                       <Pressable onPress={() => cycleStatus(task)} style={styles.statusTap} disabled={!task.applicable}>
-                        <ThemedText style={[styles.statusIcon, { color: STATUS_COLOR[task.status] }]}>{STATUS_ICON[task.status]}</ThemedText>
+                        <View style={[styles.statusSquare, task.status === 'done' && styles.statusSquareDone]}>
+                          {task.status === 'done' && <ThemedText style={styles.statusCheck}>✓</ThemedText>}
+                        </View>
                       </Pressable>
                       <Pressable style={styles.taskNameTap} onPress={() => setDetailTask(task)}>
-                        <ThemedText style={styles.taskName}>{taskName(task.seedId, task.name, lang)}</ThemedText>
+                        <ThemedText style={styles.taskName}>{englishTaskName(task.seedId, task.name)}</ThemedText>
                       </Pressable>
                       {!task.applicable && (
                         <View style={styles.naChip}>
-                          <ThemedText style={styles.naChipText}>{t('notApplicableBadge', lang)}</ThemedText>
+                          <ThemedText style={styles.naChipText}>N/A</ThemedText>
                         </View>
                       )}
-                      <Pressable onPress={() => toggleBlocked(task)} style={[styles.blockedChip, task.blocked && styles.blockedChipOn]}>
-                        <ThemedText style={task.blocked ? styles.blockedChipOnText : styles.blockedChipText}>
-                          {task.blocked ? '⚑' : '⚐'}
+                      <Pressable onPress={() => toggleFavorite(task)} style={styles.favoriteTap}>
+                        <ThemedText style={[styles.favoriteIcon, task.favorite && styles.favoriteIconOn]}>
+                          {task.favorite ? '★' : '☆'}
                         </ThemedText>
                       </Pressable>
                     </View>
@@ -256,8 +289,8 @@ export default function ProjectDetailScreen() {
 
       <ActionSheet
         visible={!!assigneeContext}
-        title={t('assignTo', lang)}
-        cancelLabel={t('cancel', lang)}
+        title="Assign to"
+        cancelLabel="Cancel"
         onCancel={() => setAssigneeContext(null)}
         options={
           assigneeContext
@@ -272,8 +305,7 @@ export default function ProjectDetailScreen() {
       <TaskDetailModal
         key={detailTask?.clickupId ?? 'none'}
         visible={!!detailTask}
-        taskName={detailTask ? taskName(detailTask.seedId, detailTask.name, lang) : ''}
-        lang={lang}
+        taskName={detailTask ? englishTaskName(detailTask.seedId, detailTask.name) : ''}
         initial={
           detailTask
             ? {
@@ -313,14 +345,31 @@ const styles = StyleSheet.create({
   taskRowBlocked: { backgroundColor: '#FFF6EC', borderRadius: Radius.small },
   taskRowNotApplicable: { opacity: 0.45 },
   statusTap: { padding: 4 },
-  statusIcon: { fontSize: 20 },
+  statusSquare: {
+    width: 22,
+    height: 22,
+    borderRadius: Radius.small,
+    borderWidth: 1.5,
+    borderColor: '#B8BCC4',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusSquareDone: { backgroundColor: '#0f9d9f', borderColor: '#0f9d9f' },
+  statusCheck: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
   taskNameTap: { flex: 1 },
   taskName: { color: '#1C1C1C', fontSize: 14 },
   naChip: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: Radius.pill, backgroundColor: '#E5E5E5' },
   naChipText: { color: '#6B6B6B', fontSize: 11, fontWeight: '700' },
-  // Fixed light pills regardless of app theme.
-  blockedChip: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: Radius.pill, backgroundColor: '#F1DCC5' },
-  blockedChipText: { color: '#5C3A1E', fontSize: 12 },
-  blockedChipOn: { backgroundColor: '#e16b16' },
-  blockedChipOnText: { color: '#FFFFFF', fontSize: 12 },
+  favoriteTap: { padding: 4 },
+  favoriteIcon: { fontSize: 20, color: '#C9C9C9' },
+  favoriteIconOn: { color: '#E0A800' },
+  noteInput: {
+    backgroundColor: '#F2F2F2',
+    color: '#1C1C1C',
+    borderRadius: Radius.card * 0.7,
+    padding: Spacing.three,
+    fontSize: 13,
+    minHeight: 44,
+    textAlignVertical: 'top',
+  },
 });

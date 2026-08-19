@@ -3,7 +3,6 @@ import { Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react
 
 import { ThemedText } from '@/components/themed-text';
 import { Brand, Radius, Spacing } from '@/constants/theme';
-import { t, type Lang } from '@/i18n';
 
 export type TaskDetailValue = {
   applicable: boolean;
@@ -17,14 +16,12 @@ export type TaskDetailValue = {
 export function TaskDetailModal({
   visible,
   taskName,
-  lang,
   initial,
   onClose,
   onSave,
 }: {
   visible: boolean;
   taskName: string;
-  lang: Lang;
   initial: TaskDetailValue | null;
   onClose: () => void;
   onSave: (value: TaskDetailValue) => void;
@@ -41,7 +38,7 @@ export function TaskDetailModal({
         <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
           <ScrollView contentContainerStyle={styles.body}>
             <ThemedText type="smallBold" style={styles.title}>
-              {t('taskDetailsTitle', lang)}
+              Task details
             </ThemedText>
             <ThemedText style={styles.taskName}>{taskName}</ThemedText>
 
@@ -49,14 +46,14 @@ export function TaskDetailModal({
               <View style={[styles.checkbox, !value.applicable && styles.checkboxOn]}>
                 {!value.applicable && <ThemedText style={styles.checkboxMark}>✕</ThemedText>}
               </View>
-              <ThemedText style={styles.toggleLabel}>{t('notApplicableLabel', lang)}</ThemedText>
+              <ThemedText style={styles.toggleLabel}>Not applicable to this project</ThemedText>
             </Pressable>
 
             <Pressable style={styles.toggleRow} onPress={() => set('blocked', !value.blocked)}>
               <View style={[styles.checkbox, value.blocked && styles.checkboxOnBlocked]}>
                 {value.blocked && <ThemedText style={styles.checkboxMark}>⚑</ThemedText>}
               </View>
-              <ThemedText style={styles.toggleLabel}>{t('blockedLabel', lang)}</ThemedText>
+              <ThemedText style={styles.toggleLabel}>Blocked</ThemedText>
             </Pressable>
 
             {value.blocked && (
@@ -64,21 +61,21 @@ export function TaskDetailModal({
                 <TextInput
                   placeholderTextColor="#9A9A9A"
                   style={styles.input}
-                  placeholder={t('blockerReasonPlaceholder', lang)}
+                  placeholder="Blocker reason"
                   value={value.blockerReason}
                   onChangeText={(v) => set('blockerReason', v)}
                 />
                 <TextInput
                   placeholderTextColor="#9A9A9A"
                   style={styles.input}
-                  placeholder={t('blockerOwnerPlaceholder', lang)}
+                  placeholder="Who needs to unblock this"
                   value={value.blockerOwner}
                   onChangeText={(v) => set('blockerOwner', v)}
                 />
                 <TextInput
                   placeholderTextColor="#9A9A9A"
                   style={styles.input}
-                  placeholder={t('blockerExpectedDatePlaceholder', lang)}
+                  placeholder="Expected date (YYYY-MM-DD)"
                   value={value.blockerExpectedDate}
                   onChangeText={(v) => set('blockerExpectedDate', v)}
                 />
@@ -88,7 +85,7 @@ export function TaskDetailModal({
             <TextInput
               placeholderTextColor="#9A9A9A"
               style={[styles.input, styles.notesInput]}
-              placeholder={t('notesPlaceholder', lang)}
+              placeholder="Internal notes (not visible to the client)"
               value={value.notes}
               onChangeText={(v) => set('notes', v)}
               multiline
@@ -96,10 +93,10 @@ export function TaskDetailModal({
 
             <View style={styles.actions}>
               <Pressable onPress={onClose} style={styles.cancelButton}>
-                <ThemedText style={styles.cancelText}>{t('cancel', lang)}</ThemedText>
+                <ThemedText style={styles.cancelText}>Cancel</ThemedText>
               </Pressable>
               <Pressable onPress={() => onSave(value)} style={styles.saveButton}>
-                <ThemedText style={styles.saveText}>{t('save', lang)}</ThemedText>
+                <ThemedText style={styles.saveText}>Save</ThemedText>
               </Pressable>
             </View>
           </ScrollView>

@@ -10,15 +10,12 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
-import { useLanguage } from '@/hooks/use-language';
 import { useThemeToggle } from '@/hooks/use-theme';
-import { t } from '@/i18n';
 import { api, type ProjectWithStats } from '@/lib/api-client';
 
 export default function ProjectListScreen() {
   const { stored, signOut } = useAuth();
   const { scheme, toggle } = useThemeToggle();
-  const { lang } = useLanguage();
   const token = stored!.token;
   const admin = stored!.session as { role: 'admin'; email: string; name: string };
 
@@ -95,14 +92,14 @@ export default function ProjectListScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <HeroPanel
           title="ATHENA"
-          subtitle={t('sdpMatrix', lang)}
+          subtitle="THE SDP MATRIX"
           right={
             <View style={styles.heroActions}>
+              <Pressable onPress={signOut} style={styles.pillButton}>
+                <ThemedText style={styles.pillButtonText}>Sign out</ThemedText>
+              </Pressable>
               <Pressable onPress={toggle} style={styles.pillButton}>
                 <ThemedText style={styles.pillButtonText}>{scheme === 'dark' ? '☀️' : '🌙'}</ThemedText>
-              </Pressable>
-              <Pressable onPress={signOut} style={styles.pillButton}>
-                <ThemedText style={styles.pillButtonText}>{t('signOut', lang)}</ThemedText>
               </Pressable>
             </View>
           }
@@ -112,7 +109,7 @@ export default function ProjectListScreen() {
             {clientCount !== null && (
               <Pressable onPress={() => router.push('/team/clients')} style={styles.clientCountBadge}>
                 <ThemedText style={styles.clientCountText}>
-                  {clientCount} {t('registeredClients', lang)}
+                  {clientCount} registered clients
                 </ThemedText>
               </Pressable>
             )}
@@ -121,19 +118,19 @@ export default function ProjectListScreen() {
 
         <ThemedView style={styles.body}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
-            {t('projectsTitle', lang)}
+            Projects
           </ThemedText>
 
           <ThemedView style={styles.newRow}>
             <TextInput
               value={newName}
               onChangeText={setNewName}
-              placeholder={t('newProjectPlaceholder', lang)}
+              placeholder="New project/client name"
               placeholderTextColor="#9A9A9A"
               style={styles.input}
             />
             <Pressable style={[styles.createButton, creating && styles.createButtonDisabled]} onPress={handleCreate} disabled={creating}>
-              <ThemedText style={styles.createButtonText}>{creating ? t('creatingProject', lang) : t('newProjectButton', lang)}</ThemedText>
+              <ThemedText style={styles.createButtonText}>{creating ? 'Creating (~20s)…' : '+ New'}</ThemedText>
             </Pressable>
           </ThemedView>
           {error && <ThemedText style={styles.error}>{error}</ThemedText>}
@@ -149,10 +146,10 @@ export default function ProjectListScreen() {
                   <View style={styles.editRow}>
                     <TextInput value={editValue} onChangeText={setEditValue} style={styles.editInput} autoFocus />
                     <Pressable onPress={saveEdit} style={styles.editSaveButton}>
-                      <ThemedText style={styles.editSaveButtonText}>{t('save', lang)}</ThemedText>
+                      <ThemedText style={styles.editSaveButtonText}>Save</ThemedText>
                     </Pressable>
                     <Pressable onPress={() => setEditingId(null)} style={styles.editCancelButton}>
-                      <ThemedText style={styles.editCancelButtonText}>{t('cancel', lang)}</ThemedText>
+                      <ThemedText style={styles.editCancelButtonText}>Cancel</ThemedText>
                     </Pressable>
                   </View>
                 ) : (
@@ -169,12 +166,12 @@ export default function ProjectListScreen() {
                       </View>
                       <View style={styles.statsRow}>
                         <ThemedText style={styles.statsText}>
-                          {item.percent}% · {item.done}/{item.total} {t('tasksWord', lang)}
+                          {item.percent}% · {item.done}/{item.total} tasks
                         </ThemedText>
                         {item.blocked > 0 && (
                           <View style={styles.blockedBadge}>
                             <ThemedText style={styles.blockedBadgeText}>
-                              ⚑ {item.blocked} {t('blockedCountLabel', lang)}
+                              ⚑ {item.blocked} blocked
                             </ThemedText>
                           </View>
                         )}
@@ -185,30 +182,30 @@ export default function ProjectListScreen() {
                 {editingId !== item.id && (
                   <View style={styles.actionsRow}>
                     <Pressable onPress={() => copyClientLink(item.id)} style={styles.actionButton}>
-                      <ThemedText style={styles.actionButtonText}>{copiedId === item.id ? t('linkCopied', lang) : t('copyClientLink', lang)}</ThemedText>
+                      <ThemedText style={styles.actionButtonText}>{copiedId === item.id ? 'Link copied!' : 'Copy link'}</ThemedText>
                     </Pressable>
                     <Pressable onPress={() => startEdit(item)} style={styles.actionButton}>
-                      <ThemedText style={styles.actionButtonText}>{t('editNameAction', lang)}</ThemedText>
+                      <ThemedText style={styles.actionButtonText}>Edit name</ThemedText>
                     </Pressable>
                     <Pressable onPress={() => setDeleteTarget(item)} style={styles.actionButton}>
-                      <ThemedText style={styles.deleteButtonText}>{t('deleteAction', lang)}</ThemedText>
+                      <ThemedText style={styles.deleteButtonText}>Delete</ThemedText>
                     </Pressable>
                   </View>
                 )}
               </View>
             )}
-            ListEmptyComponent={projects ? <ThemedText themeColor="textSecondary">{t('noProjectsYet', lang)}</ThemedText> : null}
+            ListEmptyComponent={projects ? <ThemedText themeColor="textSecondary">No projects yet.</ThemedText> : null}
           />
         </ThemedView>
       </SafeAreaView>
 
       <ActionSheet
         visible={!!deleteTarget}
-        title={t('confirmDeleteTitle', lang)}
-        message={deleteTarget ? `"${deleteTarget.name}" — ${t('confirmDeleteBody', lang)}` : undefined}
-        cancelLabel={t('cancel', lang)}
+        title="Delete project?"
+        message={deleteTarget ? `"${deleteTarget.name}" — This deletes the project and all its tasks in ClickUp. This cannot be undone.` : undefined}
+        cancelLabel="Cancel"
         onCancel={() => setDeleteTarget(null)}
-        options={deleteTarget ? [{ label: t('deleteAction', lang), destructive: true, onPress: () => doDelete(deleteTarget) }] : []}
+        options={deleteTarget ? [{ label: 'Delete', destructive: true, onPress: () => doDelete(deleteTarget) }] : []}
       />
     </ThemedView>
   );

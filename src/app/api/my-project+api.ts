@@ -6,7 +6,7 @@ import { requireAuth } from '@/lib/session';
 export async function GET(request: Request) {
   const session = requireAuth(request);
   if (session instanceof Response) return session;
-  if (session.role !== 'client') return Response.json({ error: 'Esta rota é só para contas de cliente.' }, { status: 403 });
+  if (session.role !== 'client') return Response.json({ error: 'This route is client accounts only.' }, { status: 403 });
 
   const [project, tasks] = await Promise.all([getProject(session.projectId), getProjectTasks(session.projectId)]);
   return Response.json({ project: { name: project.name }, tasks: toSafeClientView(tasks) });
