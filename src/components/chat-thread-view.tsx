@@ -1,10 +1,17 @@
 import { useMemo, type ReactNode } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Linking, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Brand, Radius, Shadow, Spacing } from '@/constants/theme';
 
-export type ChatMessage = { senderRole: 'team' | 'client'; senderName: string; body: string; sentAt: string };
+export type ChatAttachment = { url: string; name: string };
+export type ChatMessage = {
+  senderRole: 'team' | 'client';
+  senderName: string;
+  body: string;
+  sentAt: string;
+  attachment?: ChatAttachment | null;
+};
 
 function initials(name: string) {
   return name
@@ -36,6 +43,8 @@ export function ChatThreadView({
   onRefresh,
   error,
   headerRight,
+  onAttach,
+  attaching,
 }: {
   responsibleName: string | null;
   subtitle: string;
@@ -49,6 +58,8 @@ export function ChatThreadView({
   onRefresh: () => void;
   error: string | null;
   headerRight?: ReactNode;
+  onAttach?: () => void;
+  attaching?: boolean;
 }) {
   const groups = useMemo(() => {
     const result: { date: string; messages: ChatMessage[] }[] = [];
@@ -92,6 +103,11 @@ export function ChatThreadView({
                   <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}>
                     {!mine && <ThemedText style={styles.bubbleSender}>{m.senderName}</ThemedText>}
                     <ThemedText style={mine ? styles.bubbleTextMine : styles.bubbleText}>{m.body}</ThemedText>
+                    {m.attachment && (
+                      <Pressable onPress={() => Linking.openURL(m.attachment!.url)} style={styles.attachmentChip}>
+                        <ThemedText style={styles.attachmentChipText}>📎 {m.attachment.name}</ThemedText>
+                      </Pressable>
+                    )}
                   </View>
                 </View>
               );
@@ -102,6 +118,11 @@ export function ChatThreadView({
 
       <View style={styles.composerOuter}>
         <View style={styles.composer}>
+          {onAttach && (
+            <Pressable style={styles.attachButton} onPress={onAttach} disabled={attaching}>
+              <ThemedText style={styles.attachIcon}>{attaching ? '…' : '📎'}</ThemedText>
+            </Pressable>
+          )}
           <TextInput
             style={styles.input}
             placeholder="Write your message…"
@@ -191,8 +212,12 @@ const styles = StyleSheet.create({
   bubbleSender: { fontSize: 11, fontWeight: '700', color: '#6B6B6B', marginBottom: 2 },
   bubbleText: { color: '#1C1C1C', fontSize: 14 },
   bubbleTextMine: { color: '#1C1C1C', fontSize: 14 },
+  attachmentChip: { marginTop: 6, borderRadius: Radius.small, backgroundColor: 'rgba(0,0,0,0.06)', paddingVertical: 4, paddingHorizontal: 8 },
+  attachmentChipText: { fontSize: 12, color: '#1C1C1C', fontWeight: '600' },
   composerOuter: { borderTopWidth: 1, borderTopColor: '#F0F0F0', padding: Spacing.three, gap: 4 },
   composer: { flexDirection: 'row', gap: Spacing.two, alignItems: 'flex-end' },
+  attachButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  attachIcon: { fontSize: 20 },
   input: {
     flex: 1,
     backgroundColor: '#F2F2F2',

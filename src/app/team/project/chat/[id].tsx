@@ -10,6 +10,8 @@ import { ThemedView } from '@/components/themed-view';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { api, type TeamMember } from '@/lib/api-client';
+import { setLastSeen } from '@/lib/chat-seen';
+import { pickAttachment } from '@/lib/pick-document';
 
 export default function TeamChatScreen() {
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
@@ -22,6 +24,7 @@ export default function TeamChatScreen() {
   const [pickingResponsible, setPickingResponsible] = useState(false);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [attaching, setAttaching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,6 +34,8 @@ export default function TeamChatScreen() {
       .then((r) => {
         setResponsible(r.responsible);
         setMessages(r.messages);
+        const latest = r.messages[r.messages.length - 1];
+        if (latest) setLastSeen(id, latest.sentAt);
       })
       .catch((e) => setError(e.message))
       .finally(() => setRefreshing(false));
@@ -64,6 +69,20 @@ export default function TeamChatScreen() {
     }
   };
 
+  const attachFile = async () => {
+    const form = await pickAttachment();
+    if (!form) return;
+    setAttaching(true);
+    try {
+      await api.sendChatAttachment(token, id, form);
+      load();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setAttaching(false);
+    }
+  };
+
   return (
     <ThemedView style={styles.screen}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -88,6 +107,8 @@ export default function TeamChatScreen() {
           refreshing={refreshing}
           onRefresh={() => { setRefreshing(true); load(); }}
           error={error}
+          onAttach={attachFile}
+          attaching={attaching}
           headerRight={
             <Pressable onPress={() => setPickingResponsible(true)} style={styles.assignButton}>
               <ThemedText style={styles.assignButtonText}>{responsible ? 'Change' : 'Assign'}</ThemedText>

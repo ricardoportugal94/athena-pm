@@ -29,7 +29,8 @@ async function cu(method: string, urlPath: string, body?: unknown) {
 }
 
 export type Responsible = { id: number; name: string } | null;
-export type ChatMessage = { senderRole: 'team' | 'client'; senderName: string; body: string; sentAt: string };
+export type ChatAttachment = { url: string; name: string };
+export type ChatMessage = { senderRole: 'team' | 'client'; senderName: string; body: string; sentAt: string; attachment: ChatAttachment | null };
 
 function fieldValue(task: any, fieldId: string): string | null {
   return task.custom_fields?.find((f: any) => f.id === fieldId)?.value ?? null;
@@ -74,17 +75,24 @@ export async function listMessages(projectId: string): Promise<ChatMessage[]> {
   const records = await listRecords(projectId);
   return records
     .filter((r) => fieldValue(r, chatConfig.fields.recordType) === 'message')
-    .map((r) => ({
-      senderRole: (fieldValue(r, chatConfig.fields.senderRole) as 'team' | 'client') ?? 'team',
-      senderName: fieldValue(r, chatConfig.fields.senderName) ?? '',
-      body: fieldValue(r, chatConfig.fields.body) ?? '',
-      sentAt: new Date(Number(r.date_created)).toISOString(),
-    }))
+    .map((r) => {
+      const attachmentUrl = fieldValue(r, chatConfig.fields.attachmentUrl);
+      const attachmentName = fieldValue(r, chatConfig.fields.attachmentName);
+      return {
+        senderRole: (fieldValue(r, chatConfig.fields.senderRole) as 'team' | 'client') ?? 'team',
+        senderName: fieldValue(r, chatConfig.fields.senderName) ?? '',
+        body: fieldValue(r, chatConfig.fields.body) ?? '',
+        sentAt: new Date(Number(r.date_created)).toISOString(),
+        attachment: attachmentUrl && attachmentName ? { url: attachmentUrl, name: attachmentName } : null,
+      };
+    })
     .sort((a, b) => a.sentAt.localeCompare(b.sentAt));
 }
 
-export async function sendMessage(projectId: string, senderRole: 'team' | 'client', senderName: string, body: string): Promise<void> {
-  await cu('POST', `/list/${chatConfig.listId}/task`, {
+// Returns the new message's task id, so a caller can optionally attach a
+// file to it right after (see attachFileToMessage).
+export async function sendMessage(projectId: string, senderRole: 'team' | 'client', senderName: string, body: string): Promise<string> {
+  const task = await cu('POST', `/list/${chatConfig.listId}/task`, {
     name: `${projectId} — message`,
     custom_fields: [
       { id: chatConfig.fields.projectId, value: projectId },
@@ -94,4 +102,25 @@ export async function sendMessage(projectId: string, senderRole: 'team' | 'clien
       { id: chatConfig.fields.body, value: body },
     ],
   });
+  return task.id;
+}
+
+// Uploads the file to ClickUp as a real task attachment (so it's stored
+// properly, not just a link), then mirrors its URL/name onto plain custom
+// fields — list-tasks responses don't include attachments, so this is what
+// `listMessages` actually reads from.
+export async function attachFileToMessage(taskId: string, file: Blob, filename: string): Promise<ChatAttachment> {
+  const form = new FormData();
+  form.append('attachment', file, filename);
+  const res = await fetch(`${API}/task/${taskId}/attachment`, {
+    method: 'POST',
+    headers: { Authorization: token() },
+    body: form,
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(`ClickUp attachment upload -> ${res.status}: ${JSON.stringify(json)}`);
+
+  await cu('POST', `/task/${taskId}/field/${chatConfig.fields.attachmentUrl}`, { value: json.url });
+  await cu('POST', `/task/${taskId}/field/${chatConfig.fields.attachmentName}`, { value: filename });
+  return { url: json.url, name: filename };
 }

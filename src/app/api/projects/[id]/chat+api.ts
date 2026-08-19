@@ -1,16 +1,23 @@
+import { findAccountByEmail } from '@/lib/accounts';
 import { getResponsible, listMessages, sendMessage } from '@/lib/chat';
-import { requireAuth } from '@/lib/session';
+import { requireAuth, type Session } from '@/lib/session';
 
-function authorizeForProject(request: Request, projectId: string) {
+async function authorizeForProject(request: Request, projectId: string): Promise<Session | Response> {
   const session = requireAuth(request);
   if (session instanceof Response) return session;
   if (session.role === 'admin') return session;
-  if (session.role === 'client' && session.projectId === projectId) return session;
-  return Response.json({ error: 'Not allowed to view this project.' }, { status: 403 });
+  if (session.role !== 'client' || session.projectId !== projectId) {
+    return Response.json({ error: 'Not allowed to view this project.' }, { status: 403 });
+  }
+  // Clients only get to use the chat once the team has approved it for their
+  // account — until then, chatting with the team through Athena isn't open.
+  const account = await findAccountByEmail(session.email);
+  if (!account?.canChat) return Response.json({ error: 'Chat is not enabled for this account yet.' }, { status: 403 });
+  return session;
 }
 
 export async function GET(request: Request, { id }: { id: string }) {
-  const session = authorizeForProject(request, id);
+  const session = await authorizeForProject(request, id);
   if (session instanceof Response) return session;
 
   const [responsible, messages] = await Promise.all([getResponsible(id), listMessages(id)]);
@@ -19,7 +26,7 @@ export async function GET(request: Request, { id }: { id: string }) {
 
 // Body: { text }. Sender role/name are inferred from the session, never from the client.
 export async function POST(request: Request, { id }: { id: string }) {
-  const session = authorizeForProject(request, id);
+  const session = await authorizeForProject(request, id);
   if (session instanceof Response) return session;
 
   const { text } = await request.json();

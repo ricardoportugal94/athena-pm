@@ -82,10 +82,11 @@ export function TaskDetailModal({
               </View>
             )}
 
+            <ThemedText style={styles.notesLabel}>INTERNAL NOTES · NOT VISIBLE TO CLIENT</ThemedText>
             <TextInput
               placeholderTextColor="#9A9A9A"
               style={[styles.input, styles.notesInput]}
-              placeholder="Internal notes (not visible to the client)"
+              placeholder="Any description goes here…"
               value={value.notes}
               onChangeText={(v) => set('notes', v)}
               multiline
@@ -128,7 +129,8 @@ const styles = StyleSheet.create({
   toggleLabel: { color: '#1C1C1C', fontSize: 14, flex: 1 },
   blockerFields: { gap: Spacing.two, marginLeft: Spacing.four },
   input: { backgroundColor: '#F2F2F2', color: '#1C1C1C', borderRadius: Radius.card * 0.7, padding: Spacing.three, fontSize: 14 },
-  notesInput: { minHeight: 80, textAlignVertical: 'top', marginTop: Spacing.one },
+  notesLabel: { color: '#9A9A9A', fontSize: 10, fontWeight: '700', letterSpacing: 0.5, marginTop: Spacing.one },
+  notesInput: { minHeight: 80, textAlignVertical: 'top' },
   actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: Spacing.two, marginTop: Spacing.two },
   cancelButton: { paddingVertical: Spacing.two, paddingHorizontal: Spacing.three },
   cancelText: { color: '#8A8A8A', fontWeight: '600' },

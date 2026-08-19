@@ -103,22 +103,21 @@ function SignupForm({ onBack, onDone }: { onBack: () => void; onDone: (r: any) =
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ProjectSummary[]>([]);
   const [selected, setSelected] = useState<ProjectSummary | null>(null);
-  const [creatingNewName, setCreatingNewName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (selected || creatingNewName || query.trim().length < 2) return setResults([]);
+    if (selected || query.trim().length < 2) return setResults([]);
     const id = setTimeout(() => api.searchProjects(query).then(setResults).catch(() => {}), 250);
     return () => clearTimeout(id);
-  }, [query, selected, creatingNewName]);
+  }, [query, selected]);
 
   const submit = async () => {
-    if (!selected && !creatingNewName) return setError('Choose your project or create a new one.');
+    if (!selected) return setError('Choose your project from the list — ask the Portugal Production team if you can\'t find it.');
     setSubmitting(true);
     setError(null);
     try {
-      const res = await api.signup(email, password, selected ? { projectId: selected.id } : { newProjectName: creatingNewName! });
+      const res = await api.signup(email, password, selected.id);
       await onDone(res);
     } catch (e: any) {
       setError(e.message);
@@ -127,8 +126,6 @@ function SignupForm({ onBack, onDone }: { onBack: () => void; onDone: (r: any) =
     }
   };
 
-  const fieldValue = selected?.name ?? creatingNewName ?? query;
-
   return (
     <View style={styles.form}>
       <TextInput placeholderTextColor="#9A9A9A" style={styles.input} placeholder="Email" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
@@ -136,32 +133,24 @@ function SignupForm({ onBack, onDone }: { onBack: () => void; onDone: (r: any) =
       <TextInput
         placeholderTextColor="#9A9A9A"
         style={styles.input}
-        placeholder="Your project/brand name…"
-        value={fieldValue}
+        placeholder="Search for your project/brand name…"
+        value={selected?.name ?? query}
         onChangeText={(v) => {
           setSelected(null);
-          setCreatingNewName(null);
           setQuery(v);
         }}
       />
-      {!selected && !creatingNewName && query.trim().length >= 2 && (
+      {!selected && query.trim().length >= 2 && (
         <ThemedView style={styles.resultsBox}>
+          {results.length === 0 && (
+            <ThemedText style={styles.noResultsText}>No project found — ask the Portugal Production team to create it first.</ThemedText>
+          )}
           {results.map((r) => (
             <Pressable key={r.id} onPress={() => setSelected(r)} style={styles.resultRow}>
               <ThemedText style={styles.resultRowText}>{r.name}</ThemedText>
             </Pressable>
           ))}
-          <Pressable onPress={() => setCreatingNewName(query.trim())} style={styles.resultRowNew}>
-            <ThemedText style={styles.resultRowNewText}>
-              + Create new project "{query.trim()}"
-            </ThemedText>
-          </Pressable>
         </ThemedView>
-      )}
-      {creatingNewName && (
-        <ThemedText style={styles.newProjectHint}>
-          This will create the project "{creatingNewName}" with all 73 tasks.
-        </ThemedText>
       )}
 
       {error && <ThemedText style={styles.error}>{error}</ThemedText>}
@@ -246,8 +235,6 @@ const styles = StyleSheet.create({
   buttonText: { color: Brand.ink, fontWeight: '800' },
   darkModeRow: { marginTop: Spacing.two },
   darkModeText: { color: '#9A9A9A', fontSize: 12, fontWeight: '700', letterSpacing: 1 },
-  resultRowNew: { padding: Spacing.two },
-  resultRowNewText: { color: '#7A8F00', fontWeight: '700' },
-  newProjectHint: { color: '#7A8F00', fontSize: 12, textAlign: 'center' },
+  noResultsText: { color: '#9A9A9A', fontSize: 12, textAlign: 'center', padding: Spacing.two },
   forgotHint: { color: '#6B6B6B', fontSize: 12, textAlign: 'center', marginTop: -Spacing.one },
 });

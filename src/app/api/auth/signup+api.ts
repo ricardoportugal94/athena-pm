@@ -1,18 +1,17 @@
 import { createAccount, findAccountByEmail } from '@/lib/accounts';
-import { createProject, getProject, searchProjectsByName } from '@/lib/clickup';
+import { getProject } from '@/lib/clickup';
 import { hashPassword } from '@/lib/password';
 import { signToken } from '@/lib/session';
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
-// Body: { email, password, projectId } to join an existing project (picked in
-// the search box), OR { email, password, newProjectName } to create a brand
-// new one — a client signing up for the first time doesn't have a project yet,
-// so they name their own and it gets seeded with the 73 tasks right away.
+// Body: { email, password, projectId }. Projects are only ever created by the
+// Portugal Production team (see /team) — a client can only join one that
+// already exists, picked from the search box.
 export async function POST(request: Request) {
-  const { email, password, projectId, newProjectName } = await request.json();
-  if (!email || !password || (!projectId && !newProjectName)) {
-    return Response.json({ error: 'Email, password, and a project (existing or new) are required.' }, { status: 400 });
+  const { email, password, projectId } = await request.json();
+  if (!email || !password || !projectId) {
+    return Response.json({ error: 'Email, password, and a project are required.' }, { status: 400 });
   }
   if (password.length < 8) {
     return Response.json({ error: 'Password must be at least 8 characters.' }, { status: 400 });
@@ -21,17 +20,8 @@ export async function POST(request: Request) {
   const existingAccount = await findAccountByEmail(email);
   if (existingAccount) return Response.json({ error: 'An account with this email already exists.' }, { status: 409 });
 
-  let project;
-  if (projectId) {
-    project = await getProject(projectId).catch(() => null);
-    if (!project) return Response.json({ error: 'Invalid project.' }, { status: 400 });
-  } else {
-    const name = String(newProjectName).trim();
-    if (!name) return Response.json({ error: 'Project name is required.' }, { status: 400 });
-    // Defensive: don't create a duplicate if one with this exact name already exists.
-    const exactMatch = (await searchProjectsByName(name)).find((p) => p.name.toLowerCase() === name.toLowerCase());
-    project = exactMatch ?? (await createProject(name));
-  }
+  const project = await getProject(projectId).catch(() => null);
+  if (!project) return Response.json({ error: 'Invalid project.' }, { status: 400 });
 
   const account = await createAccount(email.trim().toLowerCase(), hashPassword(password), project.id, project.name);
 

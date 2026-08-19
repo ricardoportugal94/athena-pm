@@ -90,15 +90,20 @@ export default function ProjectListScreen() {
   return (
     <ThemedView style={styles.screen}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-        <HeroPanel title="ATHENA" subtitle="THE SDP MATRIX">
-          <View style={styles.heroActions}>
-            <Pressable onPress={signOut} style={styles.pillButton}>
-              <ThemedText style={styles.pillButtonText}>Sign out</ThemedText>
-            </Pressable>
-            <Pressable onPress={toggle} style={styles.pillButton}>
-              <ThemedText style={styles.pillButtonText}>{scheme === 'dark' ? '☀️' : '🌙'}</ThemedText>
-            </Pressable>
-          </View>
+        <HeroPanel
+          title="ATHENA"
+          subtitle="THE SDP MATRIX"
+          right={
+            <View style={styles.heroActions}>
+              <Pressable onPress={toggle} style={styles.pillButton}>
+                <ThemedText style={styles.pillButtonText}>{scheme === 'dark' ? '☀️' : '🌙'}</ThemedText>
+              </Pressable>
+              <Pressable onPress={signOut} style={styles.pillButton}>
+                <ThemedText style={styles.pillButtonText}>Sign out</ThemedText>
+              </Pressable>
+            </View>
+          }
+        >
           <View style={styles.heroBottomRow}>
             <ThemedText style={styles.adminName}>{admin.name}</ThemedText>
             {clientCount !== null && (

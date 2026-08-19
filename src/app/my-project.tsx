@@ -8,6 +8,7 @@ import { ProjectProgressView, type ClientTask, type ProjectNotes } from '@/compo
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/hooks/use-auth';
+import { useChatUnread } from '@/hooks/use-chat-unread';
 import { api } from '@/lib/api-client';
 
 export default function MyProjectScreen() {
@@ -16,6 +17,10 @@ export default function MyProjectScreen() {
   const [tasks, setTasks] = useState<ClientTask[] | null>(null);
   const [notes, setNotes] = useState<ProjectNotes | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
+  const [canChat, setCanChat] = useState(false);
+
+  const projectId = stored?.session.role === 'client' ? stored.session.projectId : null;
+  const { unread, totalMessages } = useChatUnread(stored?.token ?? null, projectId, 'client', canChat);
 
   useEffect(() => {
     if (!stored) return;
@@ -24,6 +29,7 @@ export default function MyProjectScreen() {
       .then((r) => {
         setProjectName(r.project.name);
         setTasks(r.tasks);
+        setCanChat(!!r.canChat);
       })
       .catch((e) => setError(e.message));
     if (stored.session.role === 'client') {
@@ -69,7 +75,13 @@ export default function MyProjectScreen() {
         />
       </SafeAreaView>
 
-      <ChatFab onPress={() => router.push('/chat')} />
+      {canChat && (
+        <ChatFab
+          onPress={() => router.push('/chat')}
+          unread={unread}
+          hint={totalMessages === 0 ? 'Message my account manager' : undefined}
+        />
+      )}
     </ThemedView>
   );
 }
@@ -78,6 +90,6 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   safeArea: { flex: 1 },
-  signOut: { alignSelf: 'flex-start', borderWidth: 1.5, borderColor: '#1C1C1C', borderRadius: 999, paddingVertical: 4, paddingHorizontal: 10 },
+  signOut: { borderWidth: 1.5, borderColor: '#1C1C1C', borderRadius: 999, paddingVertical: 4, paddingHorizontal: 10 },
   signOutText: { color: '#1C1C1C', fontWeight: '700', fontSize: 12 },
 });

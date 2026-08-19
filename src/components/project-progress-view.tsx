@@ -60,9 +60,7 @@ export function ProjectProgressView({
 
   return (
     <ThemedView style={styles.screen}>
-      <HeroPanel size="title" title={projectName} subtitle="Project progress">
-        {headerRight}
-      </HeroPanel>
+      <HeroPanel size="title" title={projectName} subtitle="Project progress" right={headerRight} />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.body}>
         <ProgressCard percent={percent} points={points} label="done" pointsLabel="points" />

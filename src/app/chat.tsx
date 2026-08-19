@@ -9,6 +9,8 @@ import { ThemedView } from '@/components/themed-view';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { api } from '@/lib/api-client';
+import { setLastSeen } from '@/lib/chat-seen';
+import { pickAttachment } from '@/lib/pick-document';
 
 // Client-side chat screen — reachable only from a logged-in client account
 // (my-project.tsx). The signed share-link view (/client/[token]) has no
@@ -19,6 +21,7 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [attaching, setAttaching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,6 +34,8 @@ export default function ChatScreen() {
       .then((r) => {
         setResponsible(r.responsible);
         setMessages(r.messages);
+        const latest = r.messages[r.messages.length - 1];
+        if (latest) setLastSeen(projectId, latest.sentAt);
       })
       .catch((e) => setError(e.message))
       .finally(() => setRefreshing(false));
@@ -52,6 +57,20 @@ export default function ChatScreen() {
       setError(e.message);
     } finally {
       setSending(false);
+    }
+  };
+
+  const attachFile = async () => {
+    const form = await pickAttachment();
+    if (!form) return;
+    setAttaching(true);
+    try {
+      await api.sendChatAttachment(stored.token, projectId, form);
+      load();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setAttaching(false);
     }
   };
 
@@ -79,6 +98,8 @@ export default function ChatScreen() {
           refreshing={refreshing}
           onRefresh={() => { setRefreshing(true); load(); }}
           error={error}
+          onAttach={attachFile}
+          attaching={attaching}
         />
       </SafeAreaView>
     </ThemedView>

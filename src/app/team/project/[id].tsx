@@ -13,6 +13,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, PhaseColors, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
+import { useChatUnread } from '@/hooks/use-chat-unread';
 import { useThemeToggle } from '@/hooks/use-theme';
 import { api, type TeamMember } from '@/lib/api-client';
 import { CATEGORY_LABEL_EN, englishTaskName } from '@/lib/task-names';
@@ -46,6 +47,7 @@ export default function ProjectDetailScreen() {
   const { stored } = useAuth();
   const { scheme, toggle } = useThemeToggle();
   const token = stored!.token;
+  const { unread: chatUnread } = useChatUnread(token, id, 'team');
 
   const [tasks, setTasks] = useState<SdpTask[] | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -214,9 +216,10 @@ export default function ProjectDetailScreen() {
           {shareUrl && <ThemedText selectable style={styles.shareUrl}>{shareUrl}</ThemedText>}
           {error && <ThemedText style={styles.error}>{error}</ThemedText>}
 
+          <ThemedText style={styles.noteLabel}>PROJECT NOTES · VISIBLE TO CLIENT</ThemedText>
           <TextInput
             style={styles.noteInput}
-            placeholder="Project notes (visible to the client)…"
+            placeholder="Any description goes here…"
             placeholderTextColor="#9A9A9A"
             value={notes.general}
             onChangeText={(v) => setNotes((prev) => ({ ...prev, general: v }))}
@@ -232,9 +235,10 @@ export default function ProjectDetailScreen() {
                 </ThemedText>
               </View>
               <ThemedText style={styles.phaseSub}>{p.done}/{p.total} tasks</ThemedText>
+              <ThemedText style={styles.noteLabel}>PHASE NOTES · VISIBLE TO CLIENT</ThemedText>
               <TextInput
                 style={styles.noteInput}
-                placeholder={`Notes for this phase (visible to the client)…`}
+                placeholder="Any description goes here…"
                 placeholderTextColor="#9A9A9A"
                 value={notes[PHASE_NOTE_KEY[p.phase]]}
                 onChangeText={(v) => setNotes((prev) => ({ ...prev, [PHASE_NOTE_KEY[p.phase]]: v }))}
@@ -315,7 +319,7 @@ export default function ProjectDetailScreen() {
         onSave={(value) => detailTask && saveTaskDetail(detailTask, value)}
       />
 
-      <ChatFab onPress={() => router.push({ pathname: '/team/project/chat/[id]', params: { id, name } })} />
+      <ChatFab unread={chatUnread} onPress={() => router.push({ pathname: '/team/project/chat/[id]', params: { id, name } })} />
     </ThemedView>
   );
 }
@@ -358,6 +362,7 @@ const styles = StyleSheet.create({
   favoriteTap: { padding: 4 },
   favoriteIcon: { fontSize: 20, color: '#C9C9C9' },
   favoriteIconOn: { color: '#E0A800' },
+  noteLabel: { color: '#9A9A9A', fontSize: 10, fontWeight: '700', letterSpacing: 0.5, marginBottom: -4 },
   noteInput: {
     backgroundColor: '#F2F2F2',
     color: '#1C1C1C',

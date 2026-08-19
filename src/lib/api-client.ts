@@ -34,8 +34,8 @@ export const api = {
   googleLogin: (code: string, redirectUri: string, codeVerifier?: string) =>
     request('/api/auth/google', { method: 'POST', body: JSON.stringify({ code, redirectUri, codeVerifier }) }),
 
-  signup: (email: string, password: string, project: { projectId: string } | { newProjectName: string }) =>
-    request('/api/auth/signup', { method: 'POST', body: JSON.stringify({ email, password, ...project }) }),
+  signup: (email: string, password: string, projectId: string) =>
+    request('/api/auth/signup', { method: 'POST', body: JSON.stringify({ email, password, projectId }) }),
 
   login: (email: string, password: string) =>
     request('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
@@ -53,13 +53,16 @@ export const api = {
 
   deleteProject: (token: string, projectId: string) => request(`/api/projects/${projectId}`, { method: 'DELETE', token }),
 
-  listClientAccounts: (token: string): Promise<{ taskId: string; email: string; projectId: string; projectName: string }[]> =>
+  listClientAccounts: (token: string): Promise<{ taskId: string; email: string; projectId: string; projectName: string; canChat: boolean }[]> =>
     request('/api/client-accounts', { token }),
 
   resetClientPassword: (token: string, taskId: string): Promise<{ tempPassword: string }> =>
     request(`/api/client-accounts/${taskId}/reset-password`, { method: 'POST', token }),
 
   deleteClientAccount: (token: string, taskId: string) => request(`/api/client-accounts/${taskId}`, { method: 'DELETE', token }),
+
+  setClientChatPermission: (token: string, taskId: string, canChat: boolean) =>
+    request(`/api/client-accounts/${taskId}/permission`, { method: 'PATCH', token, body: JSON.stringify({ canChat }) }),
 
   getProjectTasks: (token: string, projectId: string) => request(`/api/projects/${projectId}/tasks`, { token }),
 
@@ -90,4 +93,15 @@ export const api = {
 
   setChatResponsible: (token: string, projectId: string, memberId: number, memberName: string) =>
     request(`/api/projects/${projectId}/chat-responsible`, { method: 'PATCH', token, body: JSON.stringify({ memberId, memberName }) }),
+
+  sendChatAttachment: async (token: string | null, projectId: string, formData: FormData) => {
+    const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}/chat/attachment`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: formData,
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || `Error ${res.status}`);
+    return json;
+  },
 };
