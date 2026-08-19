@@ -1,5 +1,5 @@
 import { findAccountByEmail } from '@/lib/accounts';
-import { attachFileToMessage, sendMessage } from '@/lib/chat';
+import { attachFileToMessage, respondAsAssistant, sendMessage } from '@/lib/chat';
 import { requireAuth, type Session } from '@/lib/session';
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
@@ -43,5 +43,10 @@ export async function POST(request: Request, { id }: { id: string }) {
 
   const taskId = await sendMessage(id, senderRole, senderName, text.trim() || `📎 ${filename}`);
   const attachment = await attachFileToMessage(taskId, file, filename);
+
+  if (session.role === 'client') {
+    await respondAsAssistant(id, session.projectName, `(sent a file: ${filename}) ${text.trim()}`);
+  }
+
   return Response.json({ ok: true, attachment });
 }

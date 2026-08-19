@@ -7,6 +7,11 @@
 // task's native `date_created`).
 
 import chatConfig from '@/data/chat-config.json';
+import { draftAssistantReply } from '@/lib/ai-assistant';
+import { getProjectTasks } from '@/lib/clickup';
+import { getNotes } from '@/lib/project-notes';
+
+const ASSISTANT_NAME = 'Athena Assistant (AI)';
 
 const API = 'https://api.clickup.com/api/v2';
 
@@ -103,6 +108,20 @@ export async function sendMessage(projectId: string, senderRole: 'team' | 'clien
     ],
   });
   return task.id;
+}
+
+// Best-effort: an AI first-response to a client message, using the real
+// project status as context. Never throws — if Gemini is down or the key is
+// missing, the client's own message still goes through untouched, the team
+// just doesn't get an AI-drafted reply this time.
+export async function respondAsAssistant(projectId: string, projectName: string, clientMessageBody: string): Promise<void> {
+  try {
+    const [tasks, notes, priorMessages] = await Promise.all([getProjectTasks(projectId), getNotes(projectId), listMessages(projectId)]);
+    const reply = await draftAssistantReply(projectName, tasks, notes, priorMessages, clientMessageBody);
+    await sendMessage(projectId, 'team', ASSISTANT_NAME, reply);
+  } catch (err) {
+    console.error('AI assistant reply failed:', err);
+  }
 }
 
 // Uploads the file to ClickUp as a real task attachment (so it's stored

@@ -1,5 +1,5 @@
 import { findAccountByEmail } from '@/lib/accounts';
-import { getResponsible, listMessages, sendMessage } from '@/lib/chat';
+import { getResponsible, listMessages, respondAsAssistant, sendMessage } from '@/lib/chat';
 import { requireAuth, type Session } from '@/lib/session';
 
 async function authorizeForProject(request: Request, projectId: string): Promise<Session | Response> {
@@ -35,5 +35,10 @@ export async function POST(request: Request, { id }: { id: string }) {
   const senderRole = session.role === 'admin' ? 'team' : 'client';
   const senderName = session.role === 'admin' ? session.name : session.projectName;
   await sendMessage(id, senderRole, senderName, text.trim());
+
+  // The AI drafts a first response to the client — the team stays the real
+  // "responsible" and can jump in any time from the team chat screen.
+  if (session.role === 'client') await respondAsAssistant(id, session.projectName, text.trim());
+
   return Response.json({ ok: true });
 }
