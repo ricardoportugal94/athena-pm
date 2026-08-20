@@ -7,7 +7,8 @@
 // task's native `date_created`).
 
 import chatConfig from '@/data/chat-config.json';
-import { ASSISTANT_NAME, draftAssistantReply } from '@/lib/ai-assistant';
+import { draftAssistantReply } from '@/lib/ai-assistant';
+import { ASSISTANT_NAME } from '@/lib/assistant-name';
 import { getProjectTasks } from '@/lib/clickup';
 import { getNotes } from '@/lib/project-notes';
 
@@ -106,6 +107,18 @@ export async function sendMessage(projectId: string, senderRole: 'team' | 'clien
     ],
   });
   return task.id;
+}
+
+// Team members share the same thread as the client, so MIA must NOT jump in
+// on every team message (most are addressed to the client, not to her) —
+// only when a team member starts the message with her name, e.g. "MIA,
+// what's the sample lead time?" or "@MIA ...". Returns the question with the
+// mention stripped, or null if the message isn't addressed to her.
+export function extractMiaMention(text: string): string | null {
+  const match = /^@?mia\b[\s,:.\-]*/i.exec(text.trim());
+  if (!match) return null;
+  const rest = text.trim().slice(match[0].length).trim();
+  return rest || text.trim();
 }
 
 // Best-effort: an AI first-response to a client message, using the real

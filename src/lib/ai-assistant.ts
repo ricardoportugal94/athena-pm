@@ -5,13 +5,12 @@
 // the conversation at any time via the team chat screen — MIA is a first
 // responder, not a replacement.
 
+import { ASSISTANT_NAME } from '@/lib/assistant-name';
 import type { SdpTask } from '@/lib/clickup';
 
 // The "lite" variant skips extended thinking by default — a few seconds
 // instead of ~30s per reply, which matters a lot for a live chat.
 const MODEL = 'gemini-flash-lite-latest';
-
-export const ASSISTANT_NAME = 'MIA';
 
 function apiKey() {
   const k = process.env.GOOGLE_AI_API_KEY;

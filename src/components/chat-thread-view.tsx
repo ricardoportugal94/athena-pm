@@ -3,6 +3,7 @@ import { Linking, Pressable, RefreshControl, ScrollView, StyleProp, StyleSheet, 
 
 import { ThemedText } from '@/components/themed-text';
 import { Brand, Radius, Shadow, Spacing } from '@/constants/theme';
+import { ASSISTANT_NAME } from '@/lib/assistant-name';
 
 export type ChatAttachment = { url: string; name: string };
 export type ChatMessage = {
@@ -12,6 +13,15 @@ export type ChatMessage = {
   sentAt: string;
   attachment?: ChatAttachment | null;
 };
+
+// Bubble color identifies WHO actually wrote the message (client / a human
+// team member / MIA), independent of which side of the screen it's aligned
+// to — alignment still follows "is this the viewer's own side" (mineRole).
+function speakerKind(m: ChatMessage): 'client' | 'ai' | 'team' {
+  if (m.senderRole === 'client') return 'client';
+  if (m.senderName === ASSISTANT_NAME) return 'ai';
+  return 'team';
+}
 
 function initials(name: string) {
   return name
@@ -49,6 +59,7 @@ export function ChatThreadView({
   greetingTitle,
   greetingSubtitle,
   showHeader = true,
+  placeholder,
 }: {
   responsibleName: string | null;
   subtitle: string;
@@ -68,6 +79,7 @@ export function ChatThreadView({
   greetingTitle?: string;
   greetingSubtitle?: string;
   showHeader?: boolean;
+  placeholder?: string;
 }) {
   const groups = useMemo(() => {
     const result: { date: string; messages: ChatMessage[] }[] = [];
@@ -118,14 +130,23 @@ export function ChatThreadView({
             <ThemedText style={styles.dateLabel}>{group.date}</ThemedText>
             {group.messages.map((m, i) => {
               const mine = m.senderRole === mineRole;
+              const kind = speakerKind(m);
+              const bubbleColorStyle = kind === 'client' ? styles.bubbleClient : kind === 'ai' ? styles.bubbleAi : styles.bubbleTeam;
+              const bubbleTailStyle = mine ? styles.bubbleTailMine : styles.bubbleTailTheirs;
+              const textStyle = kind === 'team' ? styles.bubbleTextOnDark : styles.bubbleText;
               return (
                 <View key={i} style={[styles.bubbleRow, mine ? styles.bubbleRowMine : styles.bubbleRowTheirs]}>
-                  <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}>
-                    {!mine && <ThemedText style={styles.bubbleSender}>{m.senderName}</ThemedText>}
-                    <ThemedText style={mine ? styles.bubbleTextMine : styles.bubbleText}>{m.body}</ThemedText>
+                  <View style={[styles.bubble, bubbleColorStyle, bubbleTailStyle]}>
+                    {!mine && <ThemedText style={[styles.bubbleSender, kind === 'team' && styles.bubbleSenderOnDark]}>{m.senderName}</ThemedText>}
+                    <ThemedText style={textStyle}>{m.body}</ThemedText>
                     {m.attachment && (
-                      <Pressable onPress={() => Linking.openURL(m.attachment!.url)} style={styles.attachmentChip}>
-                        <ThemedText style={styles.attachmentChipText}>📎 {m.attachment.name}</ThemedText>
+                      <Pressable
+                        onPress={() => Linking.openURL(m.attachment!.url)}
+                        style={[styles.attachmentChip, kind === 'team' && styles.attachmentChipOnDark]}
+                      >
+                        <ThemedText style={[styles.attachmentChipText, kind === 'team' && styles.attachmentChipTextOnDark]}>
+                          📎 {m.attachment.name}
+                        </ThemedText>
                       </Pressable>
                     )}
                   </View>
@@ -145,7 +166,7 @@ export function ChatThreadView({
           )}
           <TextInput
             style={styles.input}
-            placeholder="Write your message…"
+            placeholder={placeholder ?? 'Write your message…'}
             placeholderTextColor="#9A9A9A"
             value={text}
             onChangeText={onChangeText}
@@ -231,13 +252,22 @@ const styles = StyleSheet.create({
   bubbleRowMine: { justifyContent: 'flex-end' },
   bubbleRowTheirs: { justifyContent: 'flex-start' },
   bubble: { borderRadius: Radius.card * 0.7, paddingVertical: Spacing.two, paddingHorizontal: Spacing.three, maxWidth: '78%' },
-  bubbleMine: { backgroundColor: Brand.accent, borderBottomRightRadius: 4 },
-  bubbleTheirs: { backgroundColor: '#F2F2F2', borderBottomLeftRadius: 4 },
+  // Bubble color always identifies who wrote it: client = white (bordered,
+  // since the thread background is also white), team member = black, MIA
+  // keeps the app's existing lime accent.
+  bubbleClient: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E5E5' },
+  bubbleTeam: { backgroundColor: Brand.ink },
+  bubbleAi: { backgroundColor: Brand.accent },
+  bubbleTailMine: { borderBottomRightRadius: 4 },
+  bubbleTailTheirs: { borderBottomLeftRadius: 4 },
   bubbleSender: { fontSize: 11, fontWeight: '700', color: '#6B6B6B', marginBottom: 2 },
+  bubbleSenderOnDark: { color: 'rgba(228,245,119,0.85)' },
   bubbleText: { color: '#1C1C1C', fontSize: 14 },
-  bubbleTextMine: { color: '#1C1C1C', fontSize: 14 },
+  bubbleTextOnDark: { color: '#FFFFFF', fontSize: 14 },
   attachmentChip: { marginTop: 6, borderRadius: Radius.small, backgroundColor: 'rgba(0,0,0,0.06)', paddingVertical: 4, paddingHorizontal: 8 },
+  attachmentChipOnDark: { backgroundColor: 'rgba(255,255,255,0.15)' },
   attachmentChipText: { fontSize: 12, color: '#1C1C1C', fontWeight: '600' },
+  attachmentChipTextOnDark: { color: '#FFFFFF' },
   composerOuter: { borderTopWidth: 1, borderTopColor: '#F0F0F0', padding: Spacing.three, gap: 4 },
   composer: { flexDirection: 'row', gap: Spacing.two, alignItems: 'flex-end' },
   attachButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },

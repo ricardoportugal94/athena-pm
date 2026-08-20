@@ -123,6 +123,7 @@ export function ChatWidget({
           subtitle=""
           messages={messages}
           mineRole={role}
+          placeholder={role === 'team' ? 'Message the client, or type "MIA, ..." to ask her' : undefined}
           text={text}
           onChangeText={setText}
           onSend={send}

@@ -1,4 +1,5 @@
-import { getResponsible, listMessages, respondAsAssistant, sendMessage } from '@/lib/chat';
+import { extractMiaMention, getResponsible, listMessages, respondAsAssistant, sendMessage } from '@/lib/chat';
+import { getProject } from '@/lib/clickup';
 import { requireAuth, type Session } from '@/lib/session';
 
 async function authorizeForProject(request: Request, projectId: string): Promise<Session | Response> {
@@ -33,7 +34,17 @@ export async function POST(request: Request, { id }: { id: string }) {
 
   // The AI drafts a first response to the client — the team stays the real
   // "responsible" and can jump in any time from the team chat screen.
-  if (session.role === 'client') await respondAsAssistant(id, session.projectName, text.trim());
+  if (session.role === 'client') {
+    await respondAsAssistant(id, session.projectName, text.trim());
+  } else {
+    // Team members share this same thread with the client, so MIA only
+    // answers them when a message is explicitly addressed to her.
+    const mention = extractMiaMention(text.trim());
+    if (mention) {
+      const project = await getProject(id).catch(() => null);
+      await respondAsAssistant(id, project?.name ?? 'this project', mention);
+    }
+  }
 
   return Response.json({ ok: true });
 }
