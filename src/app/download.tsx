@@ -6,7 +6,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Brand, Radius, Shadow, Spacing } from '@/constants/theme';
 
 // Update this whenever a new build is generated via `eas build --platform android --profile preview`.
-const ANDROID_APK_URL = 'https://expo.dev/artifacts/eas/BQcZYvjD-TeRZJS48N-ec74LIycN8iSSPla_C2WBH0I.apk';
+const ANDROID_APK_URL = 'https://expo.dev/artifacts/eas/HctXJYRyAI-y3jwpCsTUjUMjMmLXXo1C9pXPNJ00jcY.apk';
 
 export default function DownloadScreen() {
   return (
