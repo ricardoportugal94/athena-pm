@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
-import { Linking, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Linking, Pressable, RefreshControl, ScrollView, StyleProp, StyleSheet, TextInput, View, ViewStyle } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Brand, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -45,6 +45,10 @@ export function ChatThreadView({
   headerRight,
   onAttach,
   attaching,
+  containerStyle,
+  greetingTitle,
+  greetingSubtitle,
+  showHeader = true,
 }: {
   responsibleName: string | null;
   subtitle: string;
@@ -60,6 +64,10 @@ export function ChatThreadView({
   headerRight?: ReactNode;
   onAttach?: () => void;
   attaching?: boolean;
+  containerStyle?: StyleProp<ViewStyle>;
+  greetingTitle?: string;
+  greetingSubtitle?: string;
+  showHeader?: boolean;
 }) {
   const groups = useMemo(() => {
     const result: { date: string; messages: ChatMessage[] }[] = [];
@@ -73,18 +81,20 @@ export function ChatThreadView({
   }, [messages]);
 
   return (
-    <View style={styles.card}>
-      <View style={styles.header}>
-        <View style={styles.avatar}>
-          <ThemedText style={styles.avatarText}>{responsibleName ? initials(responsibleName) : '?'}</ThemedText>
-          <View style={styles.onlineDot} />
+    <View style={[styles.card, containerStyle]}>
+      {showHeader && (
+        <View style={styles.header}>
+          <View style={styles.avatar}>
+            <ThemedText style={styles.avatarText}>{responsibleName ? initials(responsibleName) : '?'}</ThemedText>
+            <View style={styles.onlineDot} />
+          </View>
+          <View style={styles.headerText}>
+            <ThemedText style={styles.headerName}>{responsibleName ?? 'Unassigned'}</ThemedText>
+            <ThemedText style={styles.headerSubtitle}>{subtitle}</ThemedText>
+          </View>
+          {headerRight}
         </View>
-        <View style={styles.headerText}>
-          <ThemedText style={styles.headerName}>{responsibleName ?? 'Unassigned'}</ThemedText>
-          <ThemedText style={styles.headerSubtitle}>{subtitle}</ThemedText>
-        </View>
-        {headerRight}
-      </View>
+      )}
 
       <ScrollView
         style={styles.scroll}
@@ -92,7 +102,17 @@ export function ChatThreadView({
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {error && <ThemedText style={styles.error}>{error}</ThemedText>}
-        {messages.length === 0 && <ThemedText style={styles.empty}>No messages yet.</ThemedText>}
+        {messages.length === 0 && (
+          <View style={styles.greeting}>
+            <View style={styles.greetingAvatar}>
+              <ThemedText style={styles.greetingAvatarText}>💬</ThemedText>
+            </View>
+            <View>
+              <ThemedText style={styles.greetingTitle}>{greetingTitle ?? 'Real-time help'}</ThemedText>
+              <ThemedText style={styles.greetingSubtitle}>{greetingSubtitle ?? 'How can we help?'}</ThemedText>
+            </View>
+          </View>
+        )}
         {groups.map((group) => (
           <View key={group.date}>
             <ThemedText style={styles.dateLabel}>{group.date}</ThemedText>
@@ -191,7 +211,11 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   body: { padding: Spacing.three, gap: Spacing.one, flexGrow: 1 },
   error: { color: '#E74C3C' },
-  empty: { color: '#9A9A9A', textAlign: 'center', marginTop: Spacing.four },
+  greeting: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, backgroundColor: '#F7F7F7', borderRadius: Radius.card * 0.7, padding: Spacing.three, marginTop: Spacing.one },
+  greetingAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', ...Shadow.card },
+  greetingAvatarText: { fontSize: 16 },
+  greetingTitle: { color: '#1C1C1C', fontWeight: '800', fontSize: 13 },
+  greetingSubtitle: { color: '#8A8A8A', fontSize: 12, marginTop: 1 },
   dateLabel: {
     alignSelf: 'center',
     color: '#9A9A9A',

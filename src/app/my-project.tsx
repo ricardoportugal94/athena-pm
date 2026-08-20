@@ -1,9 +1,10 @@
-import { Redirect, router } from 'expo-router';
+import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ChatFab } from '@/components/chat-fab';
+import { ChatWidget } from '@/components/chat-widget';
 import { HeaderActions } from '@/components/header-actions';
 import { ProjectProgressView, type ClientTask, type ProjectNotes } from '@/components/project-progress-view';
 import { ThemedText } from '@/components/themed-text';
@@ -18,6 +19,7 @@ export default function MyProjectScreen() {
   const [tasks, setTasks] = useState<ClientTask[] | null>(null);
   const [notes, setNotes] = useState<ProjectNotes | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const projectId = stored?.session.role === 'client' ? stored.session.projectId : null;
   const { unread, totalMessages } = useChatUnread(stored?.token ?? null, projectId, 'client');
@@ -71,10 +73,13 @@ export default function MyProjectScreen() {
       </SafeAreaView>
 
       <ChatFab
-        onPress={() => router.push('/chat')}
+        onPress={() => setChatOpen((v) => !v)}
         unread={unread}
         hint={totalMessages === 0 ? 'Message my account manager' : undefined}
       />
+      {projectId && (
+        <ChatWidget visible={chatOpen} token={stored.token} projectId={projectId} role="client" onClose={() => setChatOpen(false)} />
+      )}
     </ThemedView>
   );
 }

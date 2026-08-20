@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActionSheet } from '@/components/action-sheet';
 import { CategoryCard } from '@/components/category-card';
 import { ChatFab } from '@/components/chat-fab';
+import { ChatWidget } from '@/components/chat-widget';
 import { HeaderActions } from '@/components/header-actions';
 import { HeroPanel } from '@/components/hero-panel';
 import { computePoints, ProgressCard } from '@/components/progress-card';
@@ -49,6 +50,7 @@ export default function ProjectDetailScreen() {
   const { scheme, toggle } = useThemeToggle();
   const token = stored!.token;
   const { unread: chatUnread } = useChatUnread(token, id, 'team');
+  const [chatOpen, setChatOpen] = useState(false);
 
   const [tasks, setTasks] = useState<SdpTask[] | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -316,7 +318,8 @@ export default function ProjectDetailScreen() {
         onSave={(value) => detailTask && saveTaskDetail(detailTask, value)}
       />
 
-      <ChatFab unread={chatUnread} onPress={() => router.push({ pathname: '/team/project/chat/[id]', params: { id, name } })} />
+      <ChatFab unread={chatUnread} onPress={() => setChatOpen((v) => !v)} />
+      <ChatWidget visible={chatOpen} token={token} projectId={id} role="team" members={members} onClose={() => setChatOpen(false)} />
     </ThemedView>
   );
 }

@@ -7,11 +7,9 @@
 // task's native `date_created`).
 
 import chatConfig from '@/data/chat-config.json';
-import { draftAssistantReply } from '@/lib/ai-assistant';
+import { ASSISTANT_NAME, draftAssistantReply } from '@/lib/ai-assistant';
 import { getProjectTasks } from '@/lib/clickup';
 import { getNotes } from '@/lib/project-notes';
-
-const ASSISTANT_NAME = 'Athena Assistant (AI)';
 
 const API = 'https://api.clickup.com/api/v2';
 
