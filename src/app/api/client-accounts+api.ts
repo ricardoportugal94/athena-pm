@@ -7,5 +7,5 @@ export async function GET(request: Request) {
   if (session instanceof Response) return session;
 
   const accounts = await listAccounts();
-  return Response.json(accounts.map((a) => ({ taskId: a.taskId, email: a.email, projectId: a.projectId, projectName: a.projectName, canChat: a.canChat })));
+  return Response.json(accounts.map((a) => ({ taskId: a.taskId, email: a.email, projectId: a.projectId, projectName: a.projectName })));
 }

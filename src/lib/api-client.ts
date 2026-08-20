@@ -53,16 +53,13 @@ export const api = {
 
   deleteProject: (token: string, projectId: string) => request(`/api/projects/${projectId}`, { method: 'DELETE', token }),
 
-  listClientAccounts: (token: string): Promise<{ taskId: string; email: string; projectId: string; projectName: string; canChat: boolean }[]> =>
+  listClientAccounts: (token: string): Promise<{ taskId: string; email: string; projectId: string; projectName: string }[]> =>
     request('/api/client-accounts', { token }),
 
   resetClientPassword: (token: string, taskId: string): Promise<{ tempPassword: string }> =>
     request(`/api/client-accounts/${taskId}/reset-password`, { method: 'POST', token }),
 
   deleteClientAccount: (token: string, taskId: string) => request(`/api/client-accounts/${taskId}`, { method: 'DELETE', token }),
-
-  setClientChatPermission: (token: string, taskId: string, canChat: boolean) =>
-    request(`/api/client-accounts/${taskId}/permission`, { method: 'PATCH', token, body: JSON.stringify({ canChat }) }),
 
   getProjectTasks: (token: string, projectId: string) => request(`/api/projects/${projectId}/tasks`, { token }),
 

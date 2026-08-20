@@ -1,4 +1,3 @@
-import { findAccountByEmail } from '@/lib/accounts';
 import { getProject, getProjectTasks, toSafeClientView } from '@/lib/clickup';
 import { requireAuth } from '@/lib/session';
 
@@ -9,10 +8,6 @@ export async function GET(request: Request) {
   if (session instanceof Response) return session;
   if (session.role !== 'client') return Response.json({ error: 'This route is client accounts only.' }, { status: 403 });
 
-  const [project, tasks, account] = await Promise.all([
-    getProject(session.projectId),
-    getProjectTasks(session.projectId),
-    findAccountByEmail(session.email),
-  ]);
-  return Response.json({ project: { name: project.name }, tasks: toSafeClientView(tasks), canChat: account?.canChat ?? false });
+  const [project, tasks] = await Promise.all([getProject(session.projectId), getProjectTasks(session.projectId)]);
+  return Response.json({ project: { name: project.name }, tasks: toSafeClientView(tasks) });
 }

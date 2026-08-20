@@ -1,4 +1,3 @@
-import { findAccountByEmail } from '@/lib/accounts';
 import { getResponsible, listMessages, respondAsAssistant, sendMessage } from '@/lib/chat';
 import { requireAuth, type Session } from '@/lib/session';
 
@@ -9,10 +8,6 @@ async function authorizeForProject(request: Request, projectId: string): Promise
   if (session.role !== 'client' || session.projectId !== projectId) {
     return Response.json({ error: 'Not allowed to view this project.' }, { status: 403 });
   }
-  // Clients only get to use the chat once the team has approved it for their
-  // account — until then, chatting with the team through Athena isn't open.
-  const account = await findAccountByEmail(session.email);
-  if (!account?.canChat) return Response.json({ error: 'Chat is not enabled for this account yet.' }, { status: 403 });
   return session;
 }
 

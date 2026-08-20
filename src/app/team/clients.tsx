@@ -12,7 +12,7 @@ import { Brand, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { api } from '@/lib/api-client';
 
-type ClientAccountRow = { taskId: string; email: string; projectId: string; projectName: string; canChat: boolean };
+type ClientAccountRow = { taskId: string; email: string; projectId: string; projectName: string };
 
 export default function ClientsScreen() {
   const { stored } = useAuth();
@@ -37,16 +37,6 @@ export default function ClientsScreen() {
       setResetResult({ email: account.email, tempPassword: res.tempPassword });
     } catch (e: any) {
       setError(e.message);
-    }
-  };
-
-  const toggleChatPermission = async (account: ClientAccountRow) => {
-    setAccounts((prev) => prev?.map((a) => (a.taskId === account.taskId ? { ...a, canChat: !a.canChat } : a)) ?? prev);
-    try {
-      await api.setClientChatPermission(token, account.taskId, !account.canChat);
-    } catch (e: any) {
-      setError(e.message);
-      load();
     }
   };
 
@@ -97,11 +87,6 @@ export default function ClientsScreen() {
                   <ThemedText style={styles.projectName}>{item.projectName}</ThemedText>
                 </View>
                 <View style={styles.actions}>
-                  <Pressable onPress={() => toggleChatPermission(item)} style={[styles.chatButton, item.canChat && styles.chatButtonOn]}>
-                    <ThemedText style={item.canChat ? styles.chatButtonOnText : styles.chatButtonText}>
-                      {item.canChat ? '💬 Chat allowed' : '💬 Allow chat'}
-                    </ThemedText>
-                  </Pressable>
                   <Pressable onPress={() => setResetTarget(item)} style={styles.resetButton}>
                     <ThemedText style={styles.resetButtonText}>Reset password</ThemedText>
                   </Pressable>
@@ -170,8 +155,4 @@ const styles = StyleSheet.create({
   resetButtonText: { color: '#7A8F00', fontWeight: '700', fontSize: 12 },
   deleteButton: { backgroundColor: '#F2F2F2', borderRadius: Radius.pill, paddingVertical: 8, paddingHorizontal: 12 },
   deleteButtonText: { color: '#C0392B', fontWeight: '700', fontSize: 12 },
-  chatButton: { backgroundColor: '#F2F2F2', borderRadius: Radius.pill, paddingVertical: 8, paddingHorizontal: 12 },
-  chatButtonOn: { backgroundColor: Brand.accent },
-  chatButtonText: { color: '#595959', fontWeight: '700', fontSize: 12 },
-  chatButtonOnText: { color: Brand.ink, fontWeight: '700', fontSize: 12 },
 });

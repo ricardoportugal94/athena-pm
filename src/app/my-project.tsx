@@ -17,10 +17,9 @@ export default function MyProjectScreen() {
   const [tasks, setTasks] = useState<ClientTask[] | null>(null);
   const [notes, setNotes] = useState<ProjectNotes | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
-  const [canChat, setCanChat] = useState(false);
 
   const projectId = stored?.session.role === 'client' ? stored.session.projectId : null;
-  const { unread, totalMessages } = useChatUnread(stored?.token ?? null, projectId, 'client', canChat);
+  const { unread, totalMessages } = useChatUnread(stored?.token ?? null, projectId, 'client');
 
   useEffect(() => {
     if (!stored) return;
@@ -29,7 +28,6 @@ export default function MyProjectScreen() {
       .then((r) => {
         setProjectName(r.project.name);
         setTasks(r.tasks);
-        setCanChat(!!r.canChat);
       })
       .catch((e) => setError(e.message));
     if (stored.session.role === 'client') {
@@ -75,13 +73,11 @@ export default function MyProjectScreen() {
         />
       </SafeAreaView>
 
-      {canChat && (
-        <ChatFab
-          onPress={() => router.push('/chat')}
-          unread={unread}
-          hint={totalMessages === 0 ? 'Message my account manager' : undefined}
-        />
-      )}
+      <ChatFab
+        onPress={() => router.push('/chat')}
+        unread={unread}
+        hint={totalMessages === 0 ? 'Message my account manager' : undefined}
+      />
     </ThemedView>
   );
 }

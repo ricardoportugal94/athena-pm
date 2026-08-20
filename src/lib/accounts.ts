@@ -30,16 +30,10 @@ export type ClientAccount = {
   passwordHash: string;
   projectId: string;
   projectName: string;
-  canChat: boolean;
 };
 
 function fieldValue(task: any, fieldId: string): any {
   return task.custom_fields?.find((f: any) => f.id === fieldId)?.value ?? null;
-}
-
-function fieldBoolean(task: any, fieldId: string): boolean {
-  const v = fieldValue(task, fieldId);
-  return v === true || v === 'true';
 }
 
 function mapAccount(task: any): ClientAccount {
@@ -49,7 +43,6 @@ function mapAccount(task: any): ClientAccount {
     passwordHash: fieldValue(task, accountsConfig.fields.passwordHash) ?? '',
     projectId: fieldValue(task, accountsConfig.fields.projectId) ?? '',
     projectName: fieldValue(task, accountsConfig.fields.projectName) ?? '',
-    canChat: fieldBoolean(task, accountsConfig.fields.canChat),
   };
 }
 
@@ -66,10 +59,6 @@ export async function findAccountByEmail(email: string): Promise<ClientAccount |
 
 export async function setPasswordHash(taskId: string, passwordHash: string): Promise<void> {
   await cu('POST', `/task/${taskId}/field/${accountsConfig.fields.passwordHash}`, { value: passwordHash });
-}
-
-export async function setCanChat(taskId: string, canChat: boolean): Promise<void> {
-  await cu('POST', `/task/${taskId}/field/${accountsConfig.fields.canChat}`, { value: canChat });
 }
 
 export async function deleteAccount(taskId: string): Promise<void> {
