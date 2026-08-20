@@ -115,7 +115,9 @@ export async function sendMessage(projectId: string, senderRole: 'team' | 'clien
 // what's the sample lead time?" or "@MIA ...". Returns the question with the
 // mention stripped, or null if the message isn't addressed to her.
 export function extractMiaMention(text: string): string | null {
-  const match = /^@?mia\b[\s,:.\-]*/i.exec(text.trim());
+  // Tolerate a leading quote mark and/or "@" before her name — people
+  // naturally wrap the mention in quotes when typing it.
+  const match = /^["'“‘]*@?mia\b[\s,:."'”’.\-]*/i.exec(text.trim());
   if (!match) return null;
   const rest = text.trim().slice(match[0].length).trim();
   return rest || text.trim();
