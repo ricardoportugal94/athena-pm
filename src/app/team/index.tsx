@@ -5,6 +5,7 @@ import { FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ActionSheet } from '@/components/action-sheet';
+import { HeaderActions } from '@/components/header-actions';
 import { HeroPanel } from '@/components/hero-panel';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -94,14 +95,12 @@ export default function ProjectListScreen() {
           title="ATHENA"
           subtitle="THE SDP MATRIX"
           right={
-            <View style={styles.heroActions}>
-              <Pressable onPress={toggle} style={styles.pillButton}>
-                <ThemedText style={styles.pillButtonText}>{scheme === 'dark' ? '☀️' : '🌙'}</ThemedText>
-              </Pressable>
-              <Pressable onPress={signOut} style={styles.pillButton}>
-                <ThemedText style={styles.pillButtonText}>Sign out</ThemedText>
-              </Pressable>
-            </View>
+            <HeaderActions
+              items={[
+                { key: 'theme', label: scheme === 'dark' ? '☀️' : '🌙', onPress: toggle },
+                { key: 'signout', label: 'Sign out', onPress: signOut },
+              ]}
+            />
           }
         >
           <View style={styles.heroBottomRow}>
@@ -214,9 +213,6 @@ export default function ProjectListScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   safeArea: { flex: 1 },
-  heroActions: { flexDirection: 'row', gap: Spacing.two },
-  pillButton: { borderWidth: 1.5, borderColor: Brand.ink, borderRadius: Radius.pill, paddingVertical: 6, paddingHorizontal: 12 },
-  pillButtonText: { color: Brand.ink, fontWeight: '700', fontSize: 12 },
   heroBottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   adminName: { color: '#4A5A00', fontWeight: '600' },
   clientCountBadge: { backgroundColor: Brand.ink, borderRadius: Radius.pill, paddingVertical: 4, paddingHorizontal: 12 },

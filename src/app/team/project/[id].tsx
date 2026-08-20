@@ -6,12 +6,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActionSheet } from '@/components/action-sheet';
 import { CategoryCard } from '@/components/category-card';
 import { ChatFab } from '@/components/chat-fab';
+import { HeaderActions } from '@/components/header-actions';
 import { HeroPanel } from '@/components/hero-panel';
 import { computePoints, ProgressCard } from '@/components/progress-card';
 import { TaskDetailModal, type TaskDetailValue } from '@/components/task-detail-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Brand, PhaseColors, Radius, Spacing } from '@/constants/theme';
+import { PhaseColors, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useChatUnread } from '@/hooks/use-chat-unread';
 import { useThemeToggle } from '@/hooks/use-theme';
@@ -198,17 +199,13 @@ export default function ProjectDetailScreen() {
     <ThemedView style={styles.screen}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <HeroPanel size="title" title={name ?? 'Project'} subtitle="THE SDP MATRIX">
-          <View style={styles.heroActions}>
-            <Pressable onPress={() => router.push('/team')} style={styles.pillButton}>
-              <ThemedText style={styles.pillButtonText}>🏠 Home</ThemedText>
-            </Pressable>
-            <Pressable onPress={toggle} style={styles.pillButton}>
-              <ThemedText style={styles.pillButtonText}>{scheme === 'dark' ? '☀️' : '🌙'}</ThemedText>
-            </Pressable>
-            <Pressable onPress={shareWithClient} style={styles.pillButton}>
-              <ThemedText style={styles.pillButtonText}>Client link</ThemedText>
-            </Pressable>
-          </View>
+          <HeaderActions
+            items={[
+              { key: 'home', label: '🏠 Home', onPress: () => router.push('/team') },
+              { key: 'theme', label: scheme === 'dark' ? '☀️' : '🌙', onPress: toggle },
+              { key: 'link', label: 'Client link', onPress: shareWithClient },
+            ]}
+          />
         </HeroPanel>
 
         <ScrollView style={styles.scroll} contentContainerStyle={styles.body}>
@@ -327,9 +324,6 @@ export default function ProjectDetailScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   safeArea: { flex: 1 },
-  heroActions: { flexDirection: 'row', gap: Spacing.two },
-  pillButton: { borderWidth: 1.5, borderColor: Brand.ink, borderRadius: Radius.pill, paddingVertical: 6, paddingHorizontal: 12 },
-  pillButtonText: { color: Brand.ink, fontWeight: '700', fontSize: 12 },
   scroll: { flex: 1 },
   body: { padding: Spacing.four, gap: Spacing.three, maxWidth: 860, alignSelf: 'center', width: '100%', paddingBottom: Spacing.six },
   shareUrl: { color: '#8CA300' },

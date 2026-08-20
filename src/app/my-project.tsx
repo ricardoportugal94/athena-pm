@@ -1,9 +1,10 @@
 import { Redirect, router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ChatFab } from '@/components/chat-fab';
+import { HeaderActions } from '@/components/header-actions';
 import { ProjectProgressView, type ClientTask, type ProjectNotes } from '@/components/project-progress-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -65,11 +66,7 @@ export default function MyProjectScreen() {
           projectName={projectName}
           tasks={tasks}
           notes={notes}
-          headerRight={
-            <Pressable onPress={signOut} style={styles.signOut}>
-              <ThemedText style={styles.signOutText}>Sign out</ThemedText>
-            </Pressable>
-          }
+          headerRight={<HeaderActions items={[{ key: 'signout', label: 'Sign out', onPress: signOut }]} />}
         />
       </SafeAreaView>
 
@@ -86,6 +83,4 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   safeArea: { flex: 1 },
-  signOut: { borderWidth: 1.5, borderColor: '#1C1C1C', borderRadius: 999, paddingVertical: 4, paddingHorizontal: 10 },
-  signOutText: { color: '#1C1C1C', fontWeight: '700', fontSize: 12 },
 });

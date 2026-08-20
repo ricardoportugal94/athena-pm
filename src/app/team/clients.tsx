@@ -5,10 +5,11 @@ import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ActionSheet } from '@/components/action-sheet';
+import { HeaderActions } from '@/components/header-actions';
 import { HeroPanel } from '@/components/hero-panel';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Brand, Radius, Shadow, Spacing } from '@/constants/theme';
+import { Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { api } from '@/lib/api-client';
 
@@ -63,11 +64,7 @@ export default function ClientsScreen() {
           size="title"
           title="Clients"
           subtitle="THE SDP MATRIX"
-          right={
-            <Pressable onPress={() => router.push('/team')} style={styles.pillButton}>
-              <ThemedText style={styles.pillButtonText}>🏠 Home</ThemedText>
-            </Pressable>
-          }
+          right={<HeaderActions items={[{ key: 'home', label: '🏠 Home', onPress: () => router.push('/team') }]} />}
         />
 
         <ThemedView style={styles.body}>
@@ -134,8 +131,6 @@ export default function ClientsScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   safeArea: { flex: 1 },
-  pillButton: { borderWidth: 1.5, borderColor: Brand.ink, borderRadius: Radius.pill, paddingVertical: 6, paddingHorizontal: 12 },
-  pillButtonText: { color: Brand.ink, fontWeight: '700', fontSize: 12 },
   body: { flex: 1, padding: Spacing.four, gap: Spacing.three, maxWidth: 720, alignSelf: 'center', width: '100%' },
   error: { color: '#E74C3C' },
   listFlex: { flex: 1 },
