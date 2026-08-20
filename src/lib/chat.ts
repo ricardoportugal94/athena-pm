@@ -1,16 +1,24 @@
-// Server-only. One internal chat thread per project, between one assigned
-// team member (the "responsible") and the client. Stored as tasks in the
-// "Athena — Chat" list (a sibling of the SDP Projects folder, so it never
-// shows up in listProjects()). One list holds two kinds of records, told
-// apart by `recordType`: a single "settings" record per project (who's
-// responsible) and many "message" records (the log itself, ordered by each
-// task's native `date_created`).
+// Server-only. Two independent chat channels per project, stored as tasks in
+// the "Athena — Chat" list (a sibling of the SDP Projects folder, so it never
+// shows up in listProjects()):
+//   - "manager": human-only support — client <-> the assigned team member
+//     (the "responsible"). MIA never speaks here.
+//   - "mia": MIA's own 24/7 line — every message posted here (by client or
+//     team) gets an instant AI reply. No human assignment applies.
+// One list holds three kinds of records, told apart by `recordType`: a
+// single "settings" record per project (who's responsible + MIA's rolling
+// memory notes) and many "message" records (the log itself, ordered by each
+// task's native `date_created`). Messages created before this channel split
+// have no `channel` value — they're treated as "manager" so nothing already
+// said gets hidden.
 
 import chatConfig from '@/data/chat-config.json';
 import { draftAssistantReply } from '@/lib/ai-assistant';
 import { ASSISTANT_NAME } from '@/lib/assistant-name';
 import { getProjectTasks } from '@/lib/clickup';
 import { getNotes } from '@/lib/project-notes';
+
+export type Channel = 'manager' | 'mia';
 
 const API = 'https://api.clickup.com/api/v2';
 
@@ -45,9 +53,30 @@ async function listRecords(projectId: string) {
   return (tasks as any[]).filter((t) => fieldValue(t, chatConfig.fields.projectId) === projectId);
 }
 
+function findSettings(records: any[]) {
+  return records.find((r) => fieldValue(r, chatConfig.fields.recordType) === 'settings');
+}
+
+async function upsertSettingsField(projectId: string, fieldId: string, value: string): Promise<void> {
+  const records = await listRecords(projectId);
+  const existing = findSettings(records);
+  if (existing) {
+    await cu('POST', `/task/${existing.id}/field/${fieldId}`, { value });
+    return;
+  }
+  await cu('POST', `/list/${chatConfig.listId}/task`, {
+    name: `${projectId} — settings`,
+    custom_fields: [
+      { id: chatConfig.fields.projectId, value: projectId },
+      { id: chatConfig.fields.recordType, value: 'settings' },
+      { id: fieldId, value },
+    ],
+  });
+}
+
 export async function getResponsible(projectId: string): Promise<Responsible> {
   const records = await listRecords(projectId);
-  const settings = records.find((r) => fieldValue(r, chatConfig.fields.recordType) === 'settings');
+  const settings = findSettings(records);
   if (!settings) return null;
   const id = fieldValue(settings, chatConfig.fields.responsibleId);
   const name = fieldValue(settings, chatConfig.fields.responsibleName);
@@ -56,14 +85,12 @@ export async function getResponsible(projectId: string): Promise<Responsible> {
 
 export async function setResponsible(projectId: string, memberId: number, memberName: string): Promise<void> {
   const records = await listRecords(projectId);
-  const existing = records.find((r) => fieldValue(r, chatConfig.fields.recordType) === 'settings');
-
+  const existing = findSettings(records);
   if (existing) {
     await cu('POST', `/task/${existing.id}/field/${chatConfig.fields.responsibleId}`, { value: String(memberId) });
     await cu('POST', `/task/${existing.id}/field/${chatConfig.fields.responsibleName}`, { value: memberName });
     return;
   }
-
   await cu('POST', `/list/${chatConfig.listId}/task`, {
     name: `${projectId} — settings`,
     custom_fields: [
@@ -75,10 +102,24 @@ export async function setResponsible(projectId: string, memberId: number, member
   });
 }
 
-export async function listMessages(projectId: string): Promise<ChatMessage[]> {
+// MIA's rolling memory: a short running note of patterns/learnings from past
+// conversations, refreshed daily (see mia-memory.ts) and fed back into her
+// system prompt so her communication keeps improving over time.
+export async function getMiaNotes(projectId: string): Promise<string> {
+  const records = await listRecords(projectId);
+  const settings = findSettings(records);
+  return (settings && fieldValue(settings, chatConfig.fields.miaNotes)) || '';
+}
+
+export async function setMiaNotes(projectId: string, notes: string): Promise<void> {
+  await upsertSettingsField(projectId, chatConfig.fields.miaNotes, notes);
+}
+
+export async function listMessages(projectId: string, channel: Channel): Promise<ChatMessage[]> {
   const records = await listRecords(projectId);
   return records
     .filter((r) => fieldValue(r, chatConfig.fields.recordType) === 'message')
+    .filter((r) => (fieldValue(r, chatConfig.fields.channel) || 'manager') === channel)
     .map((r) => {
       const attachmentUrl = fieldValue(r, chatConfig.fields.attachmentUrl);
       const attachmentName = fieldValue(r, chatConfig.fields.attachmentName);
@@ -95,12 +136,13 @@ export async function listMessages(projectId: string): Promise<ChatMessage[]> {
 
 // Returns the new message's task id, so a caller can optionally attach a
 // file to it right after (see attachFileToMessage).
-export async function sendMessage(projectId: string, senderRole: 'team' | 'client', senderName: string, body: string): Promise<string> {
+export async function sendMessage(projectId: string, channel: Channel, senderRole: 'team' | 'client', senderName: string, body: string): Promise<string> {
   const task = await cu('POST', `/list/${chatConfig.listId}/task`, {
     name: `${projectId} — message`,
     custom_fields: [
       { id: chatConfig.fields.projectId, value: projectId },
       { id: chatConfig.fields.recordType, value: 'message' },
+      { id: chatConfig.fields.channel, value: channel },
       { id: chatConfig.fields.senderRole, value: senderRole },
       { id: chatConfig.fields.senderName, value: senderName },
       { id: chatConfig.fields.body, value: body },
@@ -109,29 +151,19 @@ export async function sendMessage(projectId: string, senderRole: 'team' | 'clien
   return task.id;
 }
 
-// Team members share the same thread as the client, so MIA must NOT jump in
-// on every team message (most are addressed to the client, not to her) —
-// only when a team member starts the message with her name, e.g. "MIA,
-// what's the sample lead time?" or "@MIA ...". Returns the question with the
-// mention stripped, or null if the message isn't addressed to her.
-export function extractMiaMention(text: string): string | null {
-  // Tolerate a leading quote mark and/or "@" before her name — people
-  // naturally wrap the mention in quotes when typing it.
-  const match = /^["'“‘]*@?mia\b[\s,:."'”’.\-]*/i.exec(text.trim());
-  if (!match) return null;
-  const rest = text.trim().slice(match[0].length).trim();
-  return rest || text.trim();
-}
-
-// Best-effort: an AI first-response to a client message, using the real
-// project status as context. Never throws — if Gemini is down or the key is
-// missing, the client's own message still goes through untouched, the team
-// just doesn't get an AI-drafted reply this time.
-export async function respondAsAssistant(projectId: string, projectName: string, clientMessageBody: string): Promise<void> {
+// Best-effort: MIA's reply on her own channel, using the real project status
+// as context. Never throws — if Gemini is down or the key is missing, the
+// sender's own message still goes through untouched, just without a reply.
+export async function respondAsAssistant(projectId: string, projectName: string, messageBody: string): Promise<void> {
   try {
-    const [tasks, notes, priorMessages] = await Promise.all([getProjectTasks(projectId), getNotes(projectId), listMessages(projectId)]);
-    const reply = await draftAssistantReply(projectName, tasks, notes, priorMessages, clientMessageBody);
-    await sendMessage(projectId, 'team', ASSISTANT_NAME, reply);
+    const [tasks, notes, priorMessages, miaNotes] = await Promise.all([
+      getProjectTasks(projectId),
+      getNotes(projectId),
+      listMessages(projectId, 'mia'),
+      getMiaNotes(projectId),
+    ]);
+    const reply = await draftAssistantReply(projectName, tasks, notes, priorMessages, messageBody, miaNotes);
+    await sendMessage(projectId, 'mia', 'team', ASSISTANT_NAME, reply);
   } catch (err) {
     console.error('AI assistant reply failed:', err);
   }

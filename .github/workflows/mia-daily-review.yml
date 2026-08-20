@@ -1,0 +1,16 @@
+name: MIA daily review
+
+on:
+  schedule:
+    # 23:47 UTC ≈ end of day in Portugal (22:47/23:47 local depending on DST)
+    - cron: '47 23 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the daily-review endpoint
+        run: |
+          curl -sf -X POST "${{ secrets.MIA_REVIEW_URL }}/api/mia/daily-review" \
+            -H "x-cron-secret: ${{ secrets.MIA_CRON_SECRET }}"

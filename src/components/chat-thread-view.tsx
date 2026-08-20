@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
-import { Linking, Pressable, RefreshControl, ScrollView, StyleProp, StyleSheet, TextInput, View, ViewStyle } from 'react-native';
+import { Linking, Platform, Pressable, RefreshControl, ScrollView, StyleProp, StyleSheet, TextInput, View, ViewStyle } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Brand, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -55,6 +55,7 @@ export function ChatThreadView({
   headerRight,
   onAttach,
   attaching,
+  attachHint,
   containerStyle,
   greetingTitle,
   greetingSubtitle,
@@ -75,6 +76,7 @@ export function ChatThreadView({
   headerRight?: ReactNode;
   onAttach?: () => void;
   attaching?: boolean;
+  attachHint?: string;
   containerStyle?: StyleProp<ViewStyle>;
   greetingTitle?: string;
   greetingSubtitle?: string;
@@ -160,7 +162,13 @@ export function ChatThreadView({
       <View style={styles.composerOuter}>
         <View style={styles.composer}>
           {onAttach && (
-            <Pressable style={styles.attachButton} onPress={onAttach} disabled={attaching}>
+            <Pressable
+              style={styles.attachButton}
+              onPress={onAttach}
+              disabled={attaching}
+              accessibilityLabel={attachHint ?? 'Attach a file'}
+              {...(Platform.OS === 'web' ? { title: attachHint ?? 'Attach a file here' } : {})}
+            >
               <ThemedText style={styles.attachIcon}>{attaching ? '…' : '📎'}</ThemedText>
             </Pressable>
           )}

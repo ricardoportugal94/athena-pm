@@ -1,4 +1,4 @@
-import { attachFileToMessage, respondAsAssistant, sendMessage } from '@/lib/chat';
+import { attachFileToMessage, sendMessage } from '@/lib/chat';
 import { requireAuth, type Session } from '@/lib/session';
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
@@ -21,6 +21,8 @@ async function authorizeForProject(request: Request, projectId: string): Promise
 }
 
 // multipart/form-data: { file, text? } — doc/excel/pdf attachments only.
+// Files only make sense on the human "manager" channel — MIA has no way to
+// read an attached document, so the UI never offers this on her channel.
 export async function POST(request: Request, { id }: { id: string }) {
   const session = await authorizeForProject(request, id);
   if (session instanceof Response) return session;
@@ -38,12 +40,8 @@ export async function POST(request: Request, { id }: { id: string }) {
   const senderRole = session.role === 'admin' ? 'team' : 'client';
   const senderName = session.role === 'admin' ? session.name : session.projectName;
 
-  const taskId = await sendMessage(id, senderRole, senderName, text.trim() || `📎 ${filename}`);
+  const taskId = await sendMessage(id, 'manager', senderRole, senderName, text.trim() || `📎 ${filename}`);
   const attachment = await attachFileToMessage(taskId, file, filename);
-
-  if (session.role === 'client') {
-    await respondAsAssistant(id, session.projectName, `(sent a file: ${filename}) ${text.trim()}`);
-  }
 
   return Response.json({ ok: true, attachment });
 }

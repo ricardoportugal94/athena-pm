@@ -13,7 +13,7 @@ import { computePoints, ProgressCard } from '@/components/progress-card';
 import { TaskDetailModal, type TaskDetailValue } from '@/components/task-detail-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { PhaseColors, Radius, Spacing } from '@/constants/theme';
+import { Brand, PhaseColors, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useChatUnread } from '@/hooks/use-chat-unread';
 import { useThemeToggle } from '@/hooks/use-theme';
@@ -49,8 +49,9 @@ export default function ProjectDetailScreen() {
   const { stored } = useAuth();
   const { scheme, toggle } = useThemeToggle();
   const token = stored!.token;
-  const { unread: chatUnread } = useChatUnread(token, id, 'team');
-  const [chatOpen, setChatOpen] = useState(false);
+  const { unread: managerUnread } = useChatUnread(token, id, 'manager', 'team');
+  const { unread: miaUnread } = useChatUnread(token, id, 'mia', 'team');
+  const [activeChat, setActiveChat] = useState<'manager' | 'mia' | null>(null);
 
   const [tasks, setTasks] = useState<SdpTask[] | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -217,7 +218,7 @@ export default function ProjectDetailScreen() {
 
           <ThemedText style={styles.noteLabel}>PROJECT NOTES · VISIBLE TO CLIENT</ThemedText>
           <TextInput
-            style={styles.noteInput}
+            style={[styles.noteInput, scheme === 'light' && styles.noteInputLight]}
             placeholder="Any description goes here…"
             placeholderTextColor="#9A9A9A"
             value={notes.general}
@@ -236,7 +237,7 @@ export default function ProjectDetailScreen() {
               <ThemedText style={styles.phaseSub}>{p.done}/{p.total} tasks</ThemedText>
               <ThemedText style={styles.noteLabel}>PHASE NOTES · VISIBLE TO CLIENT</ThemedText>
               <TextInput
-                style={styles.noteInput}
+                style={[styles.noteInput, scheme === 'light' && styles.noteInputLight]}
                 placeholder="Any description goes here…"
                 placeholderTextColor="#9A9A9A"
                 value={notes[PHASE_NOTE_KEY[p.phase]]}
@@ -318,8 +319,19 @@ export default function ProjectDetailScreen() {
         onSave={(value) => detailTask && saveTaskDetail(detailTask, value)}
       />
 
-      <ChatFab unread={chatUnread} onPress={() => setChatOpen((v) => !v)} />
-      <ChatWidget visible={chatOpen} token={token} projectId={id} role="team" members={members} onClose={() => setChatOpen(false)} />
+      <ChatFab icon="💬" offset={92} unread={miaUnread} onPress={() => setActiveChat((v) => (v === 'mia' ? null : 'mia'))} />
+      <ChatFab icon="👤" dark offset={24} unread={managerUnread} onPress={() => setActiveChat((v) => (v === 'manager' ? null : 'manager'))} />
+      {activeChat && (
+        <ChatWidget
+          visible
+          token={token}
+          projectId={id}
+          role="team"
+          channel={activeChat}
+          members={members}
+          onClose={() => setActiveChat(null)}
+        />
+      )}
     </ThemedView>
   );
 }
@@ -368,5 +380,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     minHeight: 44,
     textAlignVertical: 'top',
+  },
+  // The fixed light-gray fill barely stands out against the app's light-mode
+  // background (it already contrasts fine in dark mode) — give it a visible
+  // border + tint in light mode so it reads as an editable field at a glance.
+  noteInputLight: {
+    backgroundColor: '#FCFCE8',
+    borderWidth: 1.5,
+    borderColor: Brand.accent,
   },
 });

@@ -68,13 +68,15 @@ export default function LoginScreen() {
 
           {mode === 'start' && (
             <>
-              <Pressable style={styles.googleButton} disabled={!request || submitting} onPress={() => promptAsync()}>
-                {submitting ? <ActivityIndicator color={Brand.ink} /> : <ThemedText style={styles.googleButtonText}>LOG IN WITH GOOGLE</ThemedText>}
-              </Pressable>
-              <ThemedText style={styles.hint}>Only @rstivali.pt accounts can sign in as team.</ThemedText>
+              <View style={styles.googleGroup}>
+                <Pressable style={styles.googleButton} disabled={!request || submitting} onPress={() => promptAsync()}>
+                  {submitting ? <ActivityIndicator color={Brand.ink} /> : <ThemedText style={styles.googleButtonText}>LOG IN WITH GOOGLE</ThemedText>}
+                </Pressable>
+                <ThemedText style={styles.hint}>Only @rstivali.pt accounts can sign in as team.</ThemedText>
+              </View>
 
               <Pressable style={styles.googleButton} onPress={() => setMode('login')}>
-                <ThemedText style={styles.googleButtonText}>I already have a client account</ThemedText>
+                <ThemedText style={styles.googleButtonText}>Sign up with client account</ThemedText>
               </Pressable>
 
               <Pressable onPress={() => setMode('signup')}>
@@ -216,6 +218,10 @@ const styles = StyleSheet.create({
   subtitle: { color: '#8A8A8A', fontSize: 12, fontWeight: '700', letterSpacing: 2, marginTop: -Spacing.two, marginBottom: Spacing.two },
   googleButton: { alignSelf: 'stretch', backgroundColor: Brand.accent, borderRadius: Radius.pill, paddingVertical: Spacing.three, alignItems: 'center' },
   googleButtonText: { color: Brand.ink, fontWeight: '800' },
+  // Tighter than the card's default gap — this hint only qualifies the
+  // button right above it, so it should read as attached to it, not as a
+  // separate item evenly spaced from everything else.
+  googleGroup: { alignSelf: 'stretch', gap: Spacing.one },
   hint: { color: '#9A9A9A', fontSize: 12, textAlign: 'center' },
   link: { color: '#8CA300', fontWeight: '700' },
   backLink: { alignItems: 'center' },

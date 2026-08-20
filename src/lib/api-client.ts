@@ -81,12 +81,13 @@ export const api = {
 
   getChat: (
     token: string | null,
-    projectId: string
+    projectId: string,
+    channel: 'manager' | 'mia'
   ): Promise<{ responsible: { id: number; name: string } | null; messages: { senderRole: 'team' | 'client'; senderName: string; body: string; sentAt: string }[] }> =>
-    request(`/api/projects/${projectId}/chat`, { token }),
+    request(`/api/projects/${projectId}/chat?channel=${channel}`, { token }),
 
-  sendChatMessage: (token: string | null, projectId: string, text: string) =>
-    request(`/api/projects/${projectId}/chat`, { method: 'POST', token, body: JSON.stringify({ text }) }),
+  sendChatMessage: (token: string | null, projectId: string, channel: 'manager' | 'mia', text: string) =>
+    request(`/api/projects/${projectId}/chat`, { method: 'POST', token, body: JSON.stringify({ text, channel }) }),
 
   setChatResponsible: (token: string, projectId: string, memberId: number, memberName: string) =>
     request(`/api/projects/${projectId}/chat-responsible`, { method: 'PATCH', token, body: JSON.stringify({ memberId, memberName }) }),

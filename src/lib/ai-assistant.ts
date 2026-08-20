@@ -18,6 +18,19 @@ function apiKey() {
   return k;
 }
 
+async function callGemini(systemPrompt: string, contents: { role: 'user' | 'model'; parts: { text: string }[] }[]): Promise<string> {
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey()}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ systemInstruction: { parts: [{ text: systemPrompt }] }, contents }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(`Gemini error ${res.status}: ${JSON.stringify(json)}`);
+  const text = json.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join('') ?? '';
+  if (!text.trim()) throw new Error('Gemini returned an empty reply');
+  return text.trim();
+}
+
 // Curated from Portugal Production's own MIA WhatsApp-assistant material
 // (script/FAQ, scope limitations, tone guidelines, and a real interaction
 // analysis) — general business knowledge, not project-specific facts. Prices
@@ -103,17 +116,21 @@ export async function draftAssistantReply(
   tasks: SdpTask[],
   notes: { general: string; phase1: string; phase2: string; phase3: string },
   recentMessages: { senderRole: 'team' | 'client'; senderName: string; body: string }[],
-  clientMessage: string
+  clientMessage: string,
+  miaMemory?: string
 ): Promise<string> {
   const systemPrompt = [
     `You are ${ASSISTANT_NAME}, the AI assistant for Portugal Production, a footwear/apparel sourcing agency and academy.`,
-    "You're chatting with a client about their production project, inside the Athena PM app.",
+    "You're chatting on your own dedicated line inside the Athena PM app — available 24/7, separate from the human account-manager chat.",
     'For questions about THIS project (progress, blockers, notes), answer using ONLY the project status given below — never invent progress, dates, or facts not present in it.',
     'For general questions about Portugal Production, pricing, sourcing, materials, or the footwear-brand process, you may use the general knowledge base below — always frame prices/lead times as general ranges, not a firm quote, and suggest a Strategy Call with Nancy for anything project-specific or a real quote.',
     "If a question needs something you don't know or requires a decision only the team can make, say the Portugal Production team will follow up shortly — don't guess.",
     'Keep replies short (2-4 sentences), friendly, and professional. No markdown formatting.',
     '',
     KNOWLEDGE_BASE,
+    ...(miaMemory
+      ? ['', '--- LEARNED FROM PAST CONVERSATIONS (refreshed daily — use to communicate better, not as project fact) ---', miaMemory]
+      : []),
     '',
     '--- CURRENT PROJECT STATUS ---',
     summarizeProject(projectName, tasks, notes),
@@ -124,19 +141,30 @@ export async function draftAssistantReply(
     parts: [{ text: m.body }],
   }));
 
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey()}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      contents: [...history, { role: 'user', parts: [{ text: clientMessage }] }],
-    }),
-  });
+  return callGemini(systemPrompt, [...history, { role: 'user', parts: [{ text: clientMessage }] }]);
+}
 
-  const json = await res.json();
-  if (!res.ok) throw new Error(`Gemini error ${res.status}: ${JSON.stringify(json)}`);
+// Runs once a day per project (see /api/mia/daily-review). Reads today's MIA
+// conversations and folds any real, reusable pattern into a short rolling
+// note — not a transcript — that future replies use as extra context. Kept
+// deliberately short so it doesn't bloat every future prompt (and slow down
+// replies): a handful of bullet points, not a growing log.
+export async function summarizeDailyLearnings(existingNotes: string, todaysMessages: { senderRole: 'team' | 'client'; senderName: string; body: string }[]): Promise<string> {
+  const transcript = todaysMessages.map((m) => `${m.senderRole === 'client' ? 'Client' : m.senderName}: ${m.body}`).join('\n');
+  const systemPrompt = [
+    `You maintain ${ASSISTANT_NAME}'s private memory notes — short, reusable lessons about how to communicate better with clients, not a transcript or a log of facts.`,
+    'Given the existing notes and today\'s conversation, produce an UPDATED version of the notes: keep what\'s still useful, add at most 1-2 new bullet points only if today\'s conversation reveals a genuinely new, reusable pattern (a question that keeps coming up, a phrasing that confused someone, a topic to be more careful about).',
+    'Do not include any client-identifying details, project names, or one-off facts — only general communication patterns.',
+    'Keep the WHOLE result under 150 words, as short plain-text bullet points. If nothing new and reusable came up today, return the existing notes unchanged (or empty if there were none).',
+  ].join('\n');
 
-  const text = json.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join('') ?? '';
-  if (!text.trim()) throw new Error('Gemini returned an empty reply');
-  return text.trim();
+  const prompt = [
+    '--- EXISTING NOTES ---',
+    existingNotes || '(none yet)',
+    '',
+    "--- TODAY'S CONVERSATION ---",
+    transcript,
+  ].join('\n');
+
+  return callGemini(systemPrompt, [{ role: 'user', parts: [{ text: prompt }] }]);
 }

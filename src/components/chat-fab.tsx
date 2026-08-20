@@ -9,16 +9,30 @@ import { Brand, Radius, Shadow } from '@/constants/theme';
 // subtle callout next to it (e.g. nudging a first-time client to use it);
 // `unread` shows a small red dot when there's a reply the button owner
 // hasn't opened yet.
-export function ChatFab({ onPress, unread, hint }: { onPress: () => void; unread?: boolean; hint?: string }) {
+export function ChatFab({
+  onPress,
+  unread,
+  hint,
+  icon = '💬',
+  dark = false,
+  offset = 24,
+}: {
+  onPress: () => void;
+  unread?: boolean;
+  hint?: string;
+  icon?: string;
+  dark?: boolean;
+  offset?: number;
+}) {
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, { bottom: offset }]}>
       {hint && (
         <View style={styles.hintBubble}>
           <ThemedText style={styles.hintText}>{hint}</ThemedText>
         </View>
       )}
-      <Pressable onPress={onPress} style={styles.fab}>
-        <ThemedText style={styles.icon}>💬</ThemedText>
+      <Pressable onPress={onPress} style={[styles.fab, dark && styles.fabDark]}>
+        <ThemedText style={styles.icon}>{icon}</ThemedText>
         {unread && <View style={styles.badge} />}
       </Pressable>
     </View>
@@ -45,6 +59,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...Shadow.card,
   },
+  fabDark: { backgroundColor: Brand.ink },
   icon: { fontSize: 24 },
   badge: {
     position: 'absolute',

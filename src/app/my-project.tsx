@@ -19,10 +19,11 @@ export default function MyProjectScreen() {
   const [tasks, setTasks] = useState<ClientTask[] | null>(null);
   const [notes, setNotes] = useState<ProjectNotes | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
-  const [chatOpen, setChatOpen] = useState(false);
+  const [activeChat, setActiveChat] = useState<'manager' | 'mia' | null>(null);
 
   const projectId = stored?.session.role === 'client' ? stored.session.projectId : null;
-  const { unread, totalMessages } = useChatUnread(stored?.token ?? null, projectId, 'client');
+  const { unread: managerUnread, totalMessages: managerTotal } = useChatUnread(stored?.token ?? null, projectId, 'manager', 'client');
+  const { unread: miaUnread } = useChatUnread(stored?.token ?? null, projectId, 'mia', 'client');
 
   useEffect(() => {
     if (!stored) return;
@@ -73,12 +74,28 @@ export default function MyProjectScreen() {
       </SafeAreaView>
 
       <ChatFab
-        onPress={() => setChatOpen((v) => !v)}
-        unread={unread}
-        hint={totalMessages === 0 ? 'Message my account manager' : undefined}
+        icon="💬"
+        offset={92}
+        onPress={() => setActiveChat((v) => (v === 'mia' ? null : 'mia'))}
+        unread={miaUnread}
+        hint={managerTotal === 0 ? 'Ask MIA anything, 24/7' : undefined}
       />
-      {projectId && (
-        <ChatWidget visible={chatOpen} token={stored.token} projectId={projectId} role="client" onClose={() => setChatOpen(false)} />
+      <ChatFab
+        icon="👤"
+        dark
+        offset={24}
+        onPress={() => setActiveChat((v) => (v === 'manager' ? null : 'manager'))}
+        unread={managerUnread}
+      />
+      {projectId && activeChat && (
+        <ChatWidget
+          visible
+          token={stored.token}
+          projectId={projectId}
+          role="client"
+          channel={activeChat}
+          onClose={() => setActiveChat(null)}
+        />
       )}
     </ThemedView>
   );

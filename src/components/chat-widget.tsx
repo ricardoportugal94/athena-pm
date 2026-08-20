@@ -9,16 +9,20 @@ import { api, type TeamMember } from '@/lib/api-client';
 import { setLastSeen } from '@/lib/chat-seen';
 import { pickAttachment } from '@/lib/pick-document';
 
+type Channel = 'manager' | 'mia';
+
 // A small floating panel anchored above the ChatFab — like a standard
 // website support widget — instead of navigating to a full-screen page.
-// Handles both the client and team sides: the team side additionally lets
-// the current responsible be (re)assigned.
+// Two independent lines share this same component, picked by `channel`:
+//   - "manager": human-only, an assigned team member responds when free.
+//   - "mia": MIA's own 24/7 line — always replies instantly, no assignment.
 export function ChatWidget({
   visible,
   onClose,
   token,
   projectId,
   role,
+  channel,
   members,
 }: {
   visible: boolean;
@@ -26,6 +30,7 @@ export function ChatWidget({
   token: string;
   projectId: string;
   role: 'team' | 'client';
+  channel: Channel;
   members?: TeamMember[];
 }) {
   const [responsible, setResponsible] = useState<{ id: number; name: string } | null>(null);
@@ -39,12 +44,12 @@ export function ChatWidget({
 
   const load = () => {
     api
-      .getChat(token, projectId)
+      .getChat(token, projectId, channel)
       .then((r) => {
         setResponsible(r.responsible);
         setMessages(r.messages);
         const latest = r.messages[r.messages.length - 1];
-        if (latest) setLastSeen(projectId, latest.sentAt);
+        if (latest) setLastSeen(`${channel}:${projectId}`, latest.sentAt);
       })
       .catch((e) => setError(e.message))
       .finally(() => setRefreshing(false));
@@ -53,7 +58,7 @@ export function ChatWidget({
   useEffect(() => {
     if (visible) load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, projectId]);
+  }, [visible, projectId, channel]);
 
   if (!visible) return null;
 
@@ -61,7 +66,7 @@ export function ChatWidget({
     if (!text.trim() || sending) return;
     setSending(true);
     try {
-      await api.sendChatMessage(token, projectId, text.trim());
+      await api.sendChatMessage(token, projectId, channel, text.trim());
       setText('');
       load();
     } catch (e: any) {
@@ -94,18 +99,27 @@ export function ChatWidget({
     }
   };
 
+  const title = channel === 'mia' ? '💬 MIA' : '👤 Account manager';
+  const subtitle =
+    channel === 'mia'
+      ? 'Available 24/7'
+      : role === 'client'
+        ? responsible
+          ? `with ${responsible.name}`
+          : 'Portugal Production'
+        : 'Client chat';
+  const placeholder = channel === 'mia' ? 'Ask MIA anything…' : role === 'team' ? 'Message the client…' : 'Write your message…';
+
   return (
     <>
       <View style={styles.panel}>
         <View style={styles.topBar}>
           <View style={styles.topBarTitleBlock}>
-            <ThemedText style={styles.topBarTitle}>💬 MIA</ThemedText>
-            <ThemedText style={styles.topBarSubtitle}>
-              {role === 'client' ? (responsible ? `with ${responsible.name}` : 'Portugal Production') : 'Client chat'}
-            </ThemedText>
+            <ThemedText style={styles.topBarTitle}>{title}</ThemedText>
+            <ThemedText style={styles.topBarSubtitle}>{subtitle}</ThemedText>
           </View>
           <View style={styles.topBarActions}>
-            {role === 'team' && (
+            {channel === 'manager' && role === 'team' && (
               <Pressable onPress={() => setPickingResponsible(true)} style={styles.assignButton}>
                 <ThemedText style={styles.assignButtonText}>{responsible ? 'Change' : 'Assign'}</ThemedText>
               </Pressable>
@@ -119,11 +133,11 @@ export function ChatWidget({
         <ChatThreadView
           containerStyle={styles.thread}
           showHeader={false}
-          responsibleName={role === 'client' ? responsible?.name ?? null : 'Client'}
+          responsibleName={null}
           subtitle=""
           messages={messages}
           mineRole={role}
-          placeholder={role === 'team' ? 'Message the client, or start with MIA, ... to ask her (no quotes)' : undefined}
+          placeholder={placeholder}
           text={text}
           onChangeText={setText}
           onSend={send}
@@ -134,14 +148,17 @@ export function ChatWidget({
             load();
           }}
           error={error}
-          onAttach={attachFile}
+          onAttach={channel === 'manager' ? attachFile : undefined}
+          attachHint="attach a file here"
           attaching={attaching}
-          greetingTitle="Real-time help"
-          greetingSubtitle="How can we help?"
+          greetingTitle={channel === 'mia' ? 'Real-time help' : 'Leave a message'}
+          greetingSubtitle={
+            channel === 'mia' ? 'Ask me anything, any time — I reply right away' : 'Your account manager will respond as soon as possible'
+          }
         />
       </View>
 
-      {role === 'team' && (
+      {channel === 'manager' && role === 'team' && (
         <ActionSheet
           visible={pickingResponsible}
           title="Assign chat responsible"
