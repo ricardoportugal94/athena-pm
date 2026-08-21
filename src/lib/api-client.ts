@@ -31,8 +31,15 @@ async function request(path: string, opts: RequestInit & { token?: string | null
 export const api = {
   teamMembers: (token: string): Promise<TeamMember[]> => request('/api/team-members', { token }),
 
-  googleLogin: (code: string, redirectUri: string, codeVerifier?: string) =>
+  googleLogin: (
+    code: string,
+    redirectUri: string,
+    codeVerifier?: string
+  ): Promise<{ token: string; session: any } | { needsProject: true; pendingToken: string }> =>
     request('/api/auth/google', { method: 'POST', body: JSON.stringify({ code, redirectUri, codeVerifier }) }),
+
+  completeGoogleSignup: (pendingToken: string, projectId: string) =>
+    request('/api/auth/google-complete', { method: 'POST', body: JSON.stringify({ pendingToken, projectId }) }),
 
   signup: (email: string, password: string, projectId: string) =>
     request('/api/auth/signup', { method: 'POST', body: JSON.stringify({ email, password, projectId }) }),

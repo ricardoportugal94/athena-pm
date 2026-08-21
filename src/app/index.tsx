@@ -17,7 +17,7 @@ WebBrowser.maybeCompleteAuthSession();
 const GOOGLE_DISCOVERY = { authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth' };
 const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID!;
 
-type Mode = 'start' | 'signup' | 'login';
+type Mode = 'start' | 'signup' | 'login' | 'google-project';
 
 export default function LoginScreen() {
   const { stored, loading, signIn } = useAuth();
@@ -25,6 +25,7 @@ export default function LoginScreen() {
   const [mode, setMode] = useState<Mode>('start');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [pendingGoogleToken, setPendingGoogleToken] = useState<string | null>(null);
 
   const redirectUri = AuthSession.makeRedirectUri();
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
@@ -46,7 +47,14 @@ export default function LoginScreen() {
       setError(null);
       api
         .googleLogin(response.params.code, redirectUri, request?.codeVerifier)
-        .then((res) => signIn(res))
+        .then((res) => {
+          if ('needsProject' in res) {
+            setPendingGoogleToken(res.pendingToken);
+            setMode('google-project');
+          } else {
+            return signIn(res);
+          }
+        })
         .catch((e) => setError(e.message))
         .finally(() => setSubmitting(false));
     } else if (response?.type === 'error') {
@@ -72,7 +80,9 @@ export default function LoginScreen() {
                 <Pressable style={styles.googleButton} disabled={!request || submitting} onPress={() => promptAsync()}>
                   {submitting ? <ActivityIndicator color={Brand.ink} /> : <ThemedText style={styles.googleButtonText}>LOG IN WITH GOOGLE</ThemedText>}
                 </Pressable>
-                <ThemedText style={styles.hint}>Only @rstivali.pt accounts can sign in as team.</ThemedText>
+                <ThemedText style={styles.hint}>
+                  @rstivali.pt signs in as team. Clients can use Google too — first time, you&apos;ll just pick your project.
+                </ThemedText>
               </View>
 
               <Pressable style={styles.googleButton} onPress={() => setMode('login')}>
@@ -87,6 +97,9 @@ export default function LoginScreen() {
 
           {mode === 'signup' && <SignupForm onBack={() => setMode('start')} onDone={signIn} />}
           {mode === 'login' && <LoginForm onBack={() => setMode('start')} onDone={signIn} />}
+          {mode === 'google-project' && pendingGoogleToken && (
+            <GoogleProjectForm pendingToken={pendingGoogleToken} onBack={() => setMode('start')} onDone={signIn} />
+          )}
 
           {error && <ThemedText style={styles.error}>{error}</ThemedText>}
 
@@ -159,6 +172,74 @@ function SignupForm({ onBack, onDone }: { onBack: () => void; onDone: (r: any) =
 
       <Pressable style={styles.button} onPress={submit} disabled={submitting}>
         {submitting ? <ActivityIndicator color={Brand.ink} /> : <ThemedText style={styles.buttonText}>SIGN UP</ThemedText>}
+      </Pressable>
+      <Pressable onPress={onBack} style={styles.backLink}>
+        <ThemedText style={styles.link}>← Back</ThemedText>
+      </Pressable>
+    </View>
+  );
+}
+
+// Shown right after a first-time Google client sign-in: Google already
+// verified their identity, they just need to say which project is theirs.
+function GoogleProjectForm({ pendingToken, onBack, onDone }: { pendingToken: string; onBack: () => void; onDone: (r: any) => void }) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<ProjectSummary[]>([]);
+  const [selected, setSelected] = useState<ProjectSummary | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (selected || query.trim().length < 2) return setResults([]);
+    const id = setTimeout(() => api.searchProjects(query).then(setResults).catch(() => {}), 250);
+    return () => clearTimeout(id);
+  }, [query, selected]);
+
+  const submit = async () => {
+    if (!selected) return setError('Choose your project from the list — ask the Portugal Production team if you can\'t find it.');
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await api.completeGoogleSignup(pendingToken, selected.id);
+      await onDone(res);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <View style={styles.form}>
+      <ThemedText style={styles.hint}>You&apos;re signed in with Google — just pick your project to finish.</ThemedText>
+      <TextInput
+        placeholderTextColor="#9A9A9A"
+        style={styles.input}
+        placeholder="Search for your project/brand name…"
+        value={selected?.name ?? query}
+        onChangeText={(v) => {
+          setSelected(null);
+          setQuery(v);
+        }}
+        autoFocus
+      />
+      {!selected && query.trim().length >= 2 && (
+        <ThemedView style={styles.resultsBox}>
+          {results.length === 0 && (
+            <ThemedText style={styles.noResultsText}>No project found — ask the Portugal Production team to create it first.</ThemedText>
+          )}
+          {results.map((r) => (
+            <Pressable key={r.id} onPress={() => setSelected(r)} style={styles.resultRow}>
+              <ThemedText style={styles.resultRowText}>{r.name}</ThemedText>
+            </Pressable>
+          ))}
+        </ThemedView>
+      )}
+
+      {error && <ThemedText style={styles.error}>{error}</ThemedText>}
+
+      <Pressable style={styles.button} onPress={submit} disabled={submitting}>
+        {submitting ? <ActivityIndicator color={Brand.ink} /> : <ThemedText style={styles.buttonText}>CONTINUE</ThemedText>}
       </Pressable>
       <Pressable onPress={onBack} style={styles.backLink}>
         <ThemedText style={styles.link}>← Back</ThemedText>
