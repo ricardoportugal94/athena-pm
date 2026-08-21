@@ -61,6 +61,8 @@ export function ChatThreadView({
   greetingSubtitle,
   showHeader = true,
   placeholder,
+  pendingAttachmentName,
+  onRemoveAttachment,
 }: {
   responsibleName: string | null;
   subtitle: string;
@@ -82,6 +84,8 @@ export function ChatThreadView({
   greetingSubtitle?: string;
   showHeader?: boolean;
   placeholder?: string;
+  pendingAttachmentName?: string | null;
+  onRemoveAttachment?: () => void;
 }) {
   const groups = useMemo(() => {
     const result: { date: string; messages: ChatMessage[] }[] = [];
@@ -160,6 +164,14 @@ export function ChatThreadView({
       </ScrollView>
 
       <View style={styles.composerOuter}>
+        {pendingAttachmentName && (
+          <View style={styles.pendingAttachment}>
+            <ThemedText style={styles.pendingAttachmentText}>📎 {pendingAttachmentName}</ThemedText>
+            <Pressable onPress={onRemoveAttachment} accessibilityLabel="Remove attachment">
+              <ThemedText style={styles.pendingAttachmentRemove}>✕</ThemedText>
+            </Pressable>
+          </View>
+        )}
         <View style={styles.composer}>
           {onAttach && (
             <Pressable
@@ -174,7 +186,7 @@ export function ChatThreadView({
           )}
           <TextInput
             style={styles.input}
-            placeholder={placeholder ?? 'Write your message…'}
+            placeholder={pendingAttachmentName ? 'Add a caption… (optional)' : placeholder ?? 'Write your message…'}
             placeholderTextColor="#9A9A9A"
             value={text}
             onChangeText={onChangeText}
@@ -184,16 +196,16 @@ export function ChatThreadView({
                   onKeyPress: (e: any) => {
                     if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
                       e.preventDefault();
-                      if (text.trim() && !sending) onSend();
+                      if ((text.trim() || pendingAttachmentName) && !sending) onSend();
                     }
                   },
                 }
               : {})}
           />
           <Pressable
-            style={[styles.sendButton, (!text.trim() || sending) && styles.sendButtonDisabled]}
+            style={[styles.sendButton, (!text.trim() && !pendingAttachmentName) || sending ? styles.sendButtonDisabled : null]}
             onPress={onSend}
-            disabled={sending || !text.trim()}
+            disabled={sending || (!text.trim() && !pendingAttachmentName)}
           >
             <ThemedText style={styles.sendIcon}>➤</ThemedText>
           </Pressable>
@@ -287,6 +299,17 @@ const styles = StyleSheet.create({
   attachmentChipText: { fontSize: 12, color: '#1C1C1C', fontWeight: '600' },
   attachmentChipTextOnDark: { color: '#FFFFFF' },
   composerOuter: { borderTopWidth: 1, borderTopColor: '#F0F0F0', padding: Spacing.three, gap: 4 },
+  pendingAttachment: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F2F2F2',
+    borderRadius: Radius.small,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  pendingAttachmentText: { fontSize: 12, color: '#1C1C1C', fontWeight: '600', flex: 1 },
+  pendingAttachmentRemove: { fontSize: 13, color: '#6B6B6B', fontWeight: '700', paddingHorizontal: 6 },
   composer: { flexDirection: 'row', gap: Spacing.two, alignItems: 'flex-end' },
   attachButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   attachIcon: { fontSize: 20 },

@@ -99,7 +99,8 @@ export const api = {
   setChatResponsible: (token: string, projectId: string, memberId: number, memberName: string) =>
     request(`/api/projects/${projectId}/chat-responsible`, { method: 'PATCH', token, body: JSON.stringify({ memberId, memberName }) }),
 
-  sendChatAttachment: async (token: string | null, projectId: string, formData: FormData) => {
+  sendChatAttachment: async (token: string | null, projectId: string, channel: 'manager' | 'mia', formData: FormData) => {
+    formData.append('channel', channel);
     const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}/chat/attachment`, {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,

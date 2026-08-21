@@ -7,7 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Brand, Radius, Shadow, Spacing } from '@/constants/theme';
 import { api, type TeamMember } from '@/lib/api-client';
 import { setLastSeen } from '@/lib/chat-seen';
-import { pickAttachment } from '@/lib/pick-document';
+import { pickAttachment, type PickedAttachment } from '@/lib/pick-document';
 
 type Channel = 'manager' | 'mia';
 
@@ -38,6 +38,7 @@ export function ChatWidget({
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [attaching, setAttaching] = useState(false);
+  const [pendingAttachment, setPendingAttachment] = useState<PickedAttachment | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pickingResponsible, setPickingResponsible] = useState(false);
@@ -63,10 +64,16 @@ export function ChatWidget({
   if (!visible) return null;
 
   const send = async () => {
-    if (!text.trim() || sending) return;
+    if (sending || (!text.trim() && !pendingAttachment)) return;
     setSending(true);
     try {
-      await api.sendChatMessage(token, projectId, channel, text.trim());
+      if (pendingAttachment) {
+        pendingAttachment.form.append('text', text.trim());
+        await api.sendChatAttachment(token, projectId, channel, pendingAttachment.form);
+        setPendingAttachment(null);
+      } else {
+        await api.sendChatMessage(token, projectId, channel, text.trim());
+      }
       setText('');
       load();
     } catch (e: any) {
@@ -76,13 +83,13 @@ export function ChatWidget({
     }
   };
 
+  // Picking a file only stages it — it's sent together with whatever caption
+  // the user types (or alone) when they actually press send/Enter.
   const attachFile = async () => {
-    const form = await pickAttachment();
-    if (!form) return;
     setAttaching(true);
     try {
-      await api.sendChatAttachment(token, projectId, form);
-      load();
+      const picked = await pickAttachment();
+      if (picked) setPendingAttachment(picked);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -148,9 +155,11 @@ export function ChatWidget({
             load();
           }}
           error={error}
-          onAttach={channel === 'manager' ? attachFile : undefined}
+          onAttach={attachFile}
           attachHint="attach a file here"
           attaching={attaching}
+          pendingAttachmentName={pendingAttachment?.name}
+          onRemoveAttachment={() => setPendingAttachment(null)}
           greetingTitle={channel === 'mia' ? 'Real-time help' : 'Leave a message'}
           greetingSubtitle={
             channel === 'mia' ? 'Ask me anything, any time — I reply right away' : 'Your account manager will respond as soon as possible'

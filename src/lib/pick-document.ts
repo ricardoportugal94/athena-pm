@@ -11,7 +11,9 @@ const ALLOWED_MIME_TYPES = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 ];
 
-export async function pickAttachment(): Promise<FormData | null> {
+export type PickedAttachment = { form: FormData; name: string };
+
+export async function pickAttachment(): Promise<PickedAttachment | null> {
   const result = await DocumentPicker.getDocumentAsync({ type: ALLOWED_MIME_TYPES });
   if (result.canceled || !result.assets?.[0]) return null;
   const asset = result.assets[0];
@@ -22,5 +24,5 @@ export async function pickAttachment(): Promise<FormData | null> {
   } else {
     form.append('file', { uri: asset.uri, name: asset.name, type: asset.mimeType ?? 'application/octet-stream' } as any);
   }
-  return form;
+  return { form, name: asset.name };
 }

@@ -1,4 +1,5 @@
-import { attachFileToMessage, sendMessage } from '@/lib/chat';
+import { attachFileToMessage, respondAsAssistant, sendMessage, type Channel } from '@/lib/chat';
+import { getProject } from '@/lib/clickup';
 import { requireAuth, type Session } from '@/lib/session';
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
@@ -20,9 +21,9 @@ async function authorizeForProject(request: Request, projectId: string): Promise
   return session;
 }
 
-// multipart/form-data: { file, text? } — doc/excel/pdf attachments only.
-// Files only make sense on the human "manager" channel — MIA has no way to
-// read an attached document, so the UI never offers this on her channel.
+// multipart/form-data: { file, text?, channel? }. MIA can't read the file's
+// contents, but she still gets told a file was shared (filename + caption)
+// so it shows up in her thread and feeds her daily memory review.
 export async function POST(request: Request, { id }: { id: string }) {
   const session = await authorizeForProject(request, id);
   if (session instanceof Response) return session;
@@ -30,6 +31,7 @@ export async function POST(request: Request, { id }: { id: string }) {
   const form = (await request.formData()) as any;
   const file = form.get('file');
   const text = String(form.get('text') ?? '');
+  const channel: Channel = form.get('channel') === 'mia' ? 'mia' : 'manager';
   if (!(file instanceof Blob)) return Response.json({ error: 'A file is required.' }, { status: 400 });
   if (file.size > MAX_SIZE) return Response.json({ error: 'File is too large (max 10MB).' }, { status: 400 });
   if (file.type && !ALLOWED_TYPES.has(file.type)) {
@@ -39,9 +41,15 @@ export async function POST(request: Request, { id }: { id: string }) {
   const filename = (file as any).name ?? 'attachment';
   const senderRole = session.role === 'admin' ? 'team' : 'client';
   const senderName = session.role === 'admin' ? session.name : session.projectName;
+  const messageBody = text.trim() || `📎 ${filename}`;
 
-  const taskId = await sendMessage(id, 'manager', senderRole, senderName, text.trim() || `📎 ${filename}`);
+  const taskId = await sendMessage(id, channel, senderRole, senderName, messageBody);
   const attachment = await attachFileToMessage(taskId, file, filename);
+
+  if (channel === 'mia') {
+    const projectName = session.role === 'admin' ? (await getProject(id).catch(() => null))?.name ?? 'this project' : session.projectName;
+    await respondAsAssistant(id, projectName, `${messageBody} (shared a file named "${filename}")`);
+  }
 
   return Response.json({ ok: true, attachment });
 }
