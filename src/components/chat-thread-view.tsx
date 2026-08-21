@@ -179,6 +179,16 @@ export function ChatThreadView({
             value={text}
             onChangeText={onChangeText}
             multiline
+            {...(Platform.OS === 'web'
+              ? {
+                  onKeyPress: (e: any) => {
+                    if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+                      e.preventDefault();
+                      if (text.trim() && !sending) onSend();
+                    }
+                  },
+                }
+              : {})}
           />
           <Pressable
             style={[styles.sendButton, (!text.trim() || sending) && styles.sendButtonDisabled]}
