@@ -57,6 +57,16 @@ export async function findAccountByEmail(email: string): Promise<ClientAccount |
   return accounts.find((a) => a.email.toLowerCase() === normalized) ?? null;
 }
 
+// A client can be linked to more than one project — each is its own task
+// row sharing the same email/passwordHash. Used to decide whether login
+// needs a "which project?" step, and to validate a chosen project belongs
+// to that email before issuing a session for it.
+export async function findAccountsByEmail(email: string): Promise<ClientAccount[]> {
+  const accounts = await listAccounts();
+  const normalized = email.trim().toLowerCase();
+  return accounts.filter((a) => a.email.toLowerCase() === normalized);
+}
+
 export async function setPasswordHash(taskId: string, passwordHash: string): Promise<void> {
   await cu('POST', `/task/${taskId}/field/${accountsConfig.fields.passwordHash}`, { value: passwordHash });
 }

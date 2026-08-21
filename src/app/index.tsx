@@ -17,7 +17,7 @@ WebBrowser.maybeCompleteAuthSession();
 const GOOGLE_DISCOVERY = { authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth' };
 const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID!;
 
-type Mode = 'start' | 'signup' | 'login' | 'google-project';
+type Mode = 'start' | 'signup' | 'login' | 'google-project' | 'pick-project';
 
 export default function LoginScreen() {
   const { stored, loading, signIn } = useAuth();
@@ -26,6 +26,14 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [pendingGoogleToken, setPendingGoogleToken] = useState<string | null>(null);
+  const [pendingPickToken, setPendingPickToken] = useState<string | null>(null);
+  const [pickProjects, setPickProjects] = useState<ProjectSummary[]>([]);
+
+  const showPicker = (pendingToken: string, projects: ProjectSummary[]) => {
+    setPendingPickToken(pendingToken);
+    setPickProjects(projects);
+    setMode('pick-project');
+  };
 
   const redirectUri = AuthSession.makeRedirectUri();
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
@@ -51,6 +59,8 @@ export default function LoginScreen() {
           if ('needsProject' in res) {
             setPendingGoogleToken(res.pendingToken);
             setMode('google-project');
+          } else if ('needsProjectPick' in res) {
+            showPicker(res.pendingToken, res.projects);
           } else {
             return signIn(res);
           }
@@ -96,9 +106,12 @@ export default function LoginScreen() {
           )}
 
           {mode === 'signup' && <SignupForm onBack={() => setMode('start')} onDone={signIn} />}
-          {mode === 'login' && <LoginForm onBack={() => setMode('start')} onDone={signIn} />}
+          {mode === 'login' && <LoginForm onBack={() => setMode('start')} onDone={signIn} onNeedsPick={showPicker} />}
           {mode === 'google-project' && pendingGoogleToken && (
             <GoogleProjectForm pendingToken={pendingGoogleToken} onBack={() => setMode('start')} onDone={signIn} />
+          )}
+          {mode === 'pick-project' && pendingPickToken && (
+            <PickProjectForm pendingToken={pendingPickToken} projects={pickProjects} onBack={() => setMode('start')} onDone={signIn} />
           )}
 
           {error && <ThemedText style={styles.error}>{error}</ThemedText>}
@@ -248,7 +261,63 @@ function GoogleProjectForm({ pendingToken, onBack, onDone }: { pendingToken: str
   );
 }
 
-function LoginForm({ onBack, onDone }: { onBack: () => void; onDone: (r: any) => void }) {
+// Shown after login/Google sign-in when that email is linked to more than
+// one project — a fixed short list to tap, not a search box.
+function PickProjectForm({
+  pendingToken,
+  projects,
+  onBack,
+  onDone,
+}: {
+  pendingToken: string;
+  projects: ProjectSummary[];
+  onBack: () => void;
+  onDone: (r: any) => void;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState<string | null>(null);
+
+  const pick = async (project: ProjectSummary) => {
+    setSubmitting(project.id);
+    setError(null);
+    try {
+      const res = await api.selectProject(pendingToken, project.id);
+      await onDone(res);
+    } catch (e: any) {
+      setError(e.message);
+      setSubmitting(null);
+    }
+  };
+
+  return (
+    <View style={styles.form}>
+      <ThemedText style={styles.hint}>You have more than one project — which one do you want to open?</ThemedText>
+      <ThemedView style={styles.resultsBox}>
+        {projects.map((p) => (
+          <Pressable key={p.id} onPress={() => pick(p)} disabled={!!submitting} style={styles.resultRow}>
+            {submitting === p.id ? <ActivityIndicator color={Brand.ink} /> : <ThemedText style={styles.resultRowText}>{p.name}</ThemedText>}
+          </Pressable>
+        ))}
+      </ThemedView>
+
+      {error && <ThemedText style={styles.error}>{error}</ThemedText>}
+
+      <Pressable onPress={onBack} style={styles.backLink}>
+        <ThemedText style={styles.link}>← Back</ThemedText>
+      </Pressable>
+    </View>
+  );
+}
+
+function LoginForm({
+  onBack,
+  onDone,
+  onNeedsPick,
+}: {
+  onBack: () => void;
+  onDone: (r: any) => void;
+  onNeedsPick: (pendingToken: string, projects: ProjectSummary[]) => void;
+}) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -260,7 +329,11 @@ function LoginForm({ onBack, onDone }: { onBack: () => void; onDone: (r: any) =>
     setError(null);
     try {
       const res = await api.login(email, password);
-      await onDone(res);
+      if ('needsProjectPick' in res) {
+        onNeedsPick(res.pendingToken, res.projects);
+      } else {
+        await onDone(res);
+      }
     } catch (e: any) {
       setError(e.message);
     } finally {

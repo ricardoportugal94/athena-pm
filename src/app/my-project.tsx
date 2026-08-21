@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ActionSheet } from '@/components/action-sheet';
 import { ChatFab } from '@/components/chat-fab';
 import { ChatWidget } from '@/components/chat-widget';
 import { HeaderActions } from '@/components/header-actions';
@@ -11,15 +12,17 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/hooks/use-auth';
 import { useChatUnread } from '@/hooks/use-chat-unread';
-import { api } from '@/lib/api-client';
+import { api, type ProjectSummary } from '@/lib/api-client';
 
 export default function MyProjectScreen() {
-  const { stored, loading, signOut } = useAuth();
+  const { stored, loading, signIn, signOut } = useAuth();
   const [projectName, setProjectName] = useState<string | null>(null);
   const [tasks, setTasks] = useState<ClientTask[] | null>(null);
   const [notes, setNotes] = useState<ProjectNotes | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [activeChat, setActiveChat] = useState<'manager' | 'mia' | null>(null);
+  const [myProjects, setMyProjects] = useState<ProjectSummary[]>([]);
+  const [pickingProject, setPickingProject] = useState(false);
 
   const projectId = stored?.session.role === 'client' ? stored.session.projectId : null;
   const { unread: managerUnread, totalMessages: managerTotal } = useChatUnread(stored?.token ?? null, projectId, 'manager', 'client');
@@ -36,8 +39,20 @@ export default function MyProjectScreen() {
       .catch((e) => setError(e.message));
     if (stored.session.role === 'client') {
       api.getProjectNotes(stored.token, stored.session.projectId).then(setNotes).catch(() => {});
+      api.myProjects(stored.token).then((r) => setMyProjects(r.projects)).catch(() => {});
     }
   }, [stored]);
+
+  const switchProject = async (project: ProjectSummary) => {
+    if (!stored) return;
+    try {
+      const res = await api.switchProject(stored.token, project.id);
+      setTasks(null);
+      await signIn(res);
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
 
   if (loading) return null;
   if (!stored || stored.session.role !== 'client') return <Redirect href="/" />;
@@ -69,9 +84,24 @@ export default function MyProjectScreen() {
           projectName={projectName}
           tasks={tasks}
           notes={notes}
-          headerRight={<HeaderActions items={[{ key: 'signout', label: 'Sign out', onPress: signOut }]} />}
+          headerRight={
+            <HeaderActions
+              items={[
+                ...(myProjects.length > 1 ? [{ key: 'switch', label: '🔀 Switch project', onPress: () => setPickingProject(true) }] : []),
+                { key: 'signout', label: 'Sign out', onPress: signOut },
+              ]}
+            />
+          }
         />
       </SafeAreaView>
+
+      <ActionSheet
+        visible={pickingProject}
+        title="Switch project"
+        cancelLabel="Cancel"
+        onCancel={() => setPickingProject(false)}
+        options={myProjects.map((p) => ({ label: p.name, onPress: () => switchProject(p) }))}
+      />
 
       <ChatFab
         icon="💬"

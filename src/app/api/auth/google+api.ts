@@ -1,4 +1,4 @@
-import { findAccountByEmail } from '@/lib/accounts';
+import { findAccountByEmail, findAccountsByEmail } from '@/lib/accounts';
 import { signToken } from '@/lib/session';
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -60,6 +60,12 @@ export async function POST(request: Request) {
   // email/password signup form, before an account gets created for them.
   const account = await findAccountByEmail(info.email);
   if (account) {
+    // Same email can be linked to more than one project — let them pick.
+    const accounts = await findAccountsByEmail(account.email);
+    if (accounts.length > 1) {
+      const pendingToken = signToken({ role: 'pending-project-pick', email: account.email }, FIFTEEN_MIN_MS);
+      return Response.json({ needsProjectPick: true, pendingToken, projects: accounts.map((a) => ({ id: a.projectId, name: a.projectName })) });
+    }
     const session = { role: 'client' as const, email: account.email, projectId: account.projectId, projectName: account.projectName };
     const token = signToken(session, SEVEN_DAYS_MS);
     return Response.json({ token, session });

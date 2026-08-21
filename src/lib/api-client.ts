@@ -7,6 +7,8 @@ import { Platform } from 'react-native';
 export type TeamMember = { id: number; username: string };
 export type ProjectSummary = { id: string; name: string };
 export type ProjectWithStats = ProjectSummary & { done: number; total: number; percent: number; blocked: number; url: string };
+export type NeedsProjectPick = { needsProjectPick: true; pendingToken: string; projects: ProjectSummary[] };
+export type AuthResult = { token: string; session: any };
 
 // Native builds have no "same origin" to call relative paths against — they
 // need the deployed server's absolute URL. Web keeps relative paths so local
@@ -35,7 +37,7 @@ export const api = {
     code: string,
     redirectUri: string,
     codeVerifier?: string
-  ): Promise<{ token: string; session: any } | { needsProject: true; pendingToken: string }> =>
+  ): Promise<AuthResult | { needsProject: true; pendingToken: string } | NeedsProjectPick> =>
     request('/api/auth/google', { method: 'POST', body: JSON.stringify({ code, redirectUri, codeVerifier }) }),
 
   completeGoogleSignup: (pendingToken: string, projectId: string) =>
@@ -44,8 +46,16 @@ export const api = {
   signup: (email: string, password: string, projectId: string) =>
     request('/api/auth/signup', { method: 'POST', body: JSON.stringify({ email, password, projectId }) }),
 
-  login: (email: string, password: string) =>
+  login: (email: string, password: string): Promise<AuthResult | NeedsProjectPick> =>
     request('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+
+  selectProject: (pendingToken: string, projectId: string): Promise<AuthResult> =>
+    request('/api/auth/select-project', { method: 'POST', body: JSON.stringify({ pendingToken, projectId }) }),
+
+  myProjects: (token: string): Promise<{ projects: ProjectSummary[] }> => request('/api/auth/my-projects', { token }),
+
+  switchProject: (token: string, projectId: string): Promise<AuthResult> =>
+    request('/api/auth/my-projects', { method: 'POST', token, body: JSON.stringify({ projectId }) }),
 
   searchProjects: (query: string): Promise<ProjectSummary[]> =>
     request(`/api/public-projects-search?q=${encodeURIComponent(query)}`),
@@ -62,6 +72,9 @@ export const api = {
 
   listClientAccounts: (token: string): Promise<{ taskId: string; email: string; projectId: string; projectName: string }[]> =>
     request('/api/client-accounts', { token }),
+
+  addClientAccount: (token: string, email: string, projectId: string): Promise<{ ok: true; tempPassword: string | null }> =>
+    request('/api/client-accounts', { method: 'POST', token, body: JSON.stringify({ email, projectId }) }),
 
   resetClientPassword: (token: string, taskId: string): Promise<{ tempPassword: string }> =>
     request(`/api/client-accounts/${taskId}/reset-password`, { method: 'POST', token }),
