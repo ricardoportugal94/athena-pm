@@ -57,6 +57,9 @@ export const api = {
   switchProject: (token: string, projectId: string): Promise<AuthResult> =>
     request('/api/auth/my-projects', { method: 'POST', token, body: JSON.stringify({ projectId }) }),
 
+  linkProject: (token: string, projectId: string): Promise<AuthResult> =>
+    request('/api/auth/link-project', { method: 'POST', token, body: JSON.stringify({ projectId }) }),
+
   searchProjects: (query: string): Promise<ProjectSummary[]> =>
     request(`/api/public-projects-search?q=${encodeURIComponent(query)}`),
 

@@ -8,6 +8,7 @@ import { ChatFab } from '@/components/chat-fab';
 import { ChatWidget } from '@/components/chat-widget';
 import { HeaderActions } from '@/components/header-actions';
 import { ProjectProgressView, type ClientTask, type ProjectNotes } from '@/components/project-progress-view';
+import { ProjectSearchModal } from '@/components/project-search-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/hooks/use-auth';
@@ -23,6 +24,7 @@ export default function MyProjectScreen() {
   const [activeChat, setActiveChat] = useState<'manager' | 'mia' | null>(null);
   const [myProjects, setMyProjects] = useState<ProjectSummary[]>([]);
   const [pickingProject, setPickingProject] = useState(false);
+  const [addingProject, setAddingProject] = useState(false);
 
   const projectId = stored?.session.role === 'client' ? stored.session.projectId : null;
   const { unread: managerUnread, totalMessages: managerTotal } = useChatUnread(stored?.token ?? null, projectId, 'manager', 'client');
@@ -52,6 +54,14 @@ export default function MyProjectScreen() {
     } catch (e: any) {
       setError(e.message);
     }
+  };
+
+  const addProject = async (project: ProjectSummary) => {
+    if (!stored) return;
+    const res = await api.linkProject(stored.token, project.id);
+    setAddingProject(false);
+    setTasks(null);
+    await signIn(res);
   };
 
   if (loading) return null;
@@ -88,6 +98,7 @@ export default function MyProjectScreen() {
             <HeaderActions
               items={[
                 ...(myProjects.length > 1 ? [{ key: 'switch', label: '🔀 Switch project', onPress: () => setPickingProject(true) }] : []),
+                { key: 'add-project', label: '+ Add project', onPress: () => setAddingProject(true) },
                 { key: 'signout', label: 'Sign out', onPress: signOut },
               ]}
             />
@@ -101,6 +112,13 @@ export default function MyProjectScreen() {
         cancelLabel="Cancel"
         onCancel={() => setPickingProject(false)}
         options={myProjects.map((p) => ({ label: p.name, onPress: () => switchProject(p) }))}
+      />
+
+      <ProjectSearchModal
+        visible={addingProject}
+        title="Add another project"
+        onCancel={() => setAddingProject(false)}
+        onSubmit={addProject}
       />
 
       <ChatFab
