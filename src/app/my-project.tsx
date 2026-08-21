@@ -15,6 +15,8 @@ import { useAuth } from '@/hooks/use-auth';
 import { useChatUnread } from '@/hooks/use-chat-unread';
 import { api, type ProjectSummary } from '@/lib/api-client';
 
+const MIA_AVATAR = require('@/assets/images/mia-avatar.png');
+
 export default function MyProjectScreen() {
   const { stored, loading, signIn, signOut } = useAuth();
   const [projectName, setProjectName] = useState<string | null>(null);
@@ -154,7 +156,7 @@ export default function MyProjectScreen() {
       />
 
       <ChatFab
-        icon="💬"
+        image={MIA_AVATAR}
         offset={92}
         onPress={() => setActiveChat((v) => (v === 'mia' ? null : 'mia'))}
         unread={miaUnread}

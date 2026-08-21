@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Image, ImageSourcePropType, Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Brand, Radius, Shadow } from '@/constants/theme';
@@ -14,6 +14,7 @@ export function ChatFab({
   unread,
   hint,
   icon = '💬',
+  image,
   dark = false,
   offset = 24,
 }: {
@@ -21,6 +22,10 @@ export function ChatFab({
   unread?: boolean;
   hint?: string;
   icon?: string;
+  // A real photo takes over the whole bubble instead of the emoji icon —
+  // used for MIA's line so clients recognize her the same way across the
+  // chat button and the message avatars.
+  image?: ImageSourcePropType;
   dark?: boolean;
   offset?: number;
 }) {
@@ -32,7 +37,7 @@ export function ChatFab({
         </View>
       )}
       <Pressable onPress={onPress} style={[styles.fab, dark && styles.fabDark]}>
-        <ThemedText style={styles.icon}>{icon}</ThemedText>
+        {image ? <Image source={image} style={styles.fabImage} /> : <ThemedText style={styles.icon}>{icon}</ThemedText>}
         {unread && <View style={styles.badge} />}
       </Pressable>
     </View>
@@ -61,6 +66,7 @@ const styles = StyleSheet.create({
   },
   fabDark: { backgroundColor: Brand.ink },
   icon: { fontSize: 24 },
+  fabImage: { width: 56, height: 56, borderRadius: 28 },
   badge: {
     position: 'absolute',
     top: 4,

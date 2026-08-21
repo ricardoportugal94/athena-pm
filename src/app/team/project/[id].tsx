@@ -18,6 +18,8 @@ import { useAuth } from '@/hooks/use-auth';
 import { useChatUnread } from '@/hooks/use-chat-unread';
 import { useThemeToggle } from '@/hooks/use-theme';
 import { api, type TeamMember } from '@/lib/api-client';
+
+const MIA_AVATAR = require('@/assets/images/mia-avatar.png');
 import { CATEGORY_LABEL_EN, englishTaskName } from '@/lib/task-names';
 
 const PHASE_LABEL_EN: Record<number, string> = { 1: '1. Prepare', 2: '2. Test', 3: '3. Make' };
@@ -319,7 +321,7 @@ export default function ProjectDetailScreen() {
         onSave={(value) => detailTask && saveTaskDetail(detailTask, value)}
       />
 
-      <ChatFab icon="💬" offset={92} unread={miaUnread} onPress={() => setActiveChat((v) => (v === 'mia' ? null : 'mia'))} />
+      <ChatFab image={MIA_AVATAR} offset={92} unread={miaUnread} onPress={() => setActiveChat((v) => (v === 'mia' ? null : 'mia'))} />
       <ChatFab icon="👤" dark offset={24} unread={managerUnread} onPress={() => setActiveChat((v) => (v === 'manager' ? null : 'manager'))} />
       {activeChat && (
         <ChatWidget

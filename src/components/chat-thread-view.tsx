@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
-import { Linking, Platform, Pressable, RefreshControl, ScrollView, StyleProp, StyleSheet, TextInput, View, ViewStyle } from 'react-native';
+import { Image, Linking, Platform, Pressable, RefreshControl, ScrollView, StyleProp, StyleSheet, TextInput, View, ViewStyle } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Brand, Radius, Shadow, Spacing } from '@/constants/theme';
 import { ASSISTANT_NAME } from '@/lib/assistant-name';
+
+const MIA_AVATAR = require('@/assets/images/mia-avatar.png');
 
 export type ChatAttachment = { url: string; name: string };
 export type ChatMessage = {
@@ -154,11 +156,7 @@ export function ChatThreadView({
               const textStyle = kind === 'team' ? styles.bubbleTextOnDark : styles.bubbleText;
               return (
                 <View key={i} style={[styles.bubbleRow, mine ? styles.bubbleRowMine : styles.bubbleRowTheirs]}>
-                  {!mine && kind === 'ai' && (
-                    <View style={styles.aiAvatar}>
-                      <ThemedText style={styles.aiAvatarText}>🤖</ThemedText>
-                    </View>
-                  )}
+                  {!mine && kind === 'ai' && <Image source={MIA_AVATAR} style={styles.aiAvatar} />}
                   <View style={[styles.bubble, bubbleColorStyle, bubbleTailStyle]}>
                     {!mine && <ThemedText style={[styles.bubbleSender, kind === 'team' && styles.bubbleSenderOnDark]}>{m.senderName}</ThemedText>}
                     <ThemedText style={textStyle}>{m.body}</ThemedText>
@@ -180,9 +178,7 @@ export function ChatThreadView({
         ))}
         {thinking && (
           <View style={[styles.bubbleRow, styles.bubbleRowTheirs]}>
-            <View style={styles.aiAvatar}>
-              <ThemedText style={styles.aiAvatarText}>🤖</ThemedText>
-            </View>
+            <Image source={MIA_AVATAR} style={styles.aiAvatar} />
             <View style={[styles.bubble, styles.bubbleAi, styles.bubbleTailTheirs]}>
               <ThemedText style={styles.bubbleText}>···</ThemedText>
             </View>
@@ -306,8 +302,7 @@ const styles = StyleSheet.create({
     marginVertical: Spacing.two,
   },
   bubbleRow: { flexDirection: 'row', marginBottom: Spacing.one, alignItems: 'flex-end', gap: 6 },
-  aiAvatar: { width: 26, height: 26, borderRadius: 13, backgroundColor: Brand.accent, alignItems: 'center', justifyContent: 'center' },
-  aiAvatarText: { fontSize: 14 },
+  aiAvatar: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#EAEAEA' },
   bubbleRowMine: { justifyContent: 'flex-end' },
   bubbleRowTheirs: { justifyContent: 'flex-start' },
   bubble: { borderRadius: Radius.card * 0.7, paddingVertical: Spacing.two, paddingHorizontal: Spacing.three, maxWidth: '78%' },
