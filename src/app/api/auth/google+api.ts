@@ -1,4 +1,5 @@
 import { findAccountByEmail, findAccountsByEmail } from '@/lib/accounts';
+import { isEmailBlocked } from '@/lib/blocklist';
 import { signToken } from '@/lib/session';
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -58,6 +59,10 @@ export async function POST(request: Request) {
   // email/password. An existing account logs straight in; a first-time
   // Google user still has to say which project they're on, same as the
   // email/password signup form, before an account gets created for them.
+  if (await isEmailBlocked(info.email)) {
+    return Response.json({ error: 'This account has been blocked. Contact the Portugal Production team.' }, { status: 403 });
+  }
+
   const account = await findAccountByEmail(info.email);
   if (account) {
     // Same email can be linked to more than one active project — the

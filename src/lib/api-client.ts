@@ -84,6 +84,17 @@ export const api = {
 
   deleteClientAccount: (token: string, taskId: string) => request(`/api/client-accounts/${taskId}`, { method: 'DELETE', token }),
 
+  deleteAllClientAccounts: (token: string, email: string): Promise<{ ok: true; removed: number }> =>
+    request('/api/client-accounts/delete-all', { method: 'POST', token, body: JSON.stringify({ email }) }),
+
+  blockClientEmail: (token: string, email: string): Promise<{ ok: true; removed: number }> =>
+    request('/api/client-accounts/block', { method: 'POST', token, body: JSON.stringify({ email }) }),
+
+  listBlockedEmails: (token: string): Promise<{ emails: string[] }> => request('/api/blocked-emails', { token }),
+
+  unblockEmail: (token: string, email: string) =>
+    request('/api/blocked-emails/unblock', { method: 'POST', token, body: JSON.stringify({ email }) }),
+
   getProjectTasks: (token: string, projectId: string) => request(`/api/projects/${projectId}/tasks`, { token }),
 
   updateTask: (token: string, projectId: string, taskId: string, update: Record<string, unknown>) =>

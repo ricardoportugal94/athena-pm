@@ -1,4 +1,5 @@
 import { findAccountByEmail, findAccountsByEmail } from '@/lib/accounts';
+import { isEmailBlocked } from '@/lib/blocklist';
 import { verifyPassword } from '@/lib/password';
 import { signToken } from '@/lib/session';
 
@@ -7,6 +8,10 @@ const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 export async function POST(request: Request) {
   const { email, password } = await request.json();
   if (!email || !password) return Response.json({ error: 'Email and password are required.' }, { status: 400 });
+
+  if (await isEmailBlocked(email)) {
+    return Response.json({ error: 'This account has been blocked. Contact the Portugal Production team.' }, { status: 403 });
+  }
 
   const account = await findAccountByEmail(email);
   if (!account || !verifyPassword(password, account.passwordHash)) {

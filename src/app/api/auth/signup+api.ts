@@ -1,4 +1,5 @@
 import { createAccount, findAccountByEmail, findAccountsByEmail } from '@/lib/accounts';
+import { isEmailBlocked } from '@/lib/blocklist';
 import { getProject } from '@/lib/clickup';
 import { hashPassword, verifyPassword } from '@/lib/password';
 import { signToken } from '@/lib/session';
@@ -19,6 +20,9 @@ export async function POST(request: Request) {
   }
   if (password.length < 8) {
     return Response.json({ error: 'Password must be at least 8 characters.' }, { status: 400 });
+  }
+  if (await isEmailBlocked(email)) {
+    return Response.json({ error: 'This email has been blocked. Contact the Portugal Production team.' }, { status: 403 });
   }
 
   const project = await getProject(projectId).catch(() => null);

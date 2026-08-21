@@ -25,13 +25,22 @@ export default function ClientsScreen() {
   const [resetResult, setResetResult] = useState<{ email: string; tempPassword: string | null } | null>(null);
   const [copied, setCopied] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ClientAccountRow | null>(null);
+  const [deleteClientTarget, setDeleteClientTarget] = useState<string | null>(null);
+  const [blockTarget, setBlockTarget] = useState<string | null>(null);
+  const [blockedEmails, setBlockedEmails] = useState<string[]>([]);
+  const [showBlocked, setShowBlocked] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
 
   const load = useCallback(() => {
     api.listClientAccounts(token).then(setAccounts).catch((e) => setError(e.message));
   }, [token]);
 
+  const loadBlocked = useCallback(() => {
+    api.listBlockedEmails(token).then((r) => setBlockedEmails(r.emails)).catch((e) => setError(e.message));
+  }, [token]);
+
   useEffect(load, [load]);
+  useEffect(loadBlocked, [loadBlocked]);
 
   // One client can be linked to several projects, each its own account row
   // sharing the same email/password — group them so the list shows one card
@@ -73,6 +82,34 @@ export default function ClientsScreen() {
     }
   };
 
+  const doDeleteClient = async (email: string) => {
+    try {
+      await api.deleteAllClientAccounts(token, email);
+      load();
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  const doBlock = async (email: string) => {
+    try {
+      await api.blockClientEmail(token, email);
+      load();
+      loadBlocked();
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  const doUnblock = async (email: string) => {
+    try {
+      await api.unblockEmail(token, email);
+      loadBlocked();
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
   const copyPassword = async () => {
     if (!resetResult?.tempPassword) return;
     await Clipboard.setStringAsync(resetResult.tempPassword);
@@ -91,6 +128,7 @@ export default function ClientsScreen() {
             <HeaderActions
               items={[
                 { key: 'add', label: '+ Add client', onPress: () => setShowAdd(true) },
+                { key: 'blocked', label: `🚫 Blocked (${blockedEmails.length})`, onPress: () => setShowBlocked(true) },
                 { key: 'home', label: '🏠 Home', onPress: () => router.push('/team') },
               ]}
             />
@@ -154,6 +192,12 @@ export default function ClientsScreen() {
                   <Pressable onPress={() => setResetTarget(group.rows[0])} style={styles.resetButton}>
                     <ThemedText style={styles.resetButtonText}>Reset password</ThemedText>
                   </Pressable>
+                  <Pressable onPress={() => setDeleteClientTarget(group.email)} style={styles.deleteClientButton}>
+                    <ThemedText style={styles.deleteClientButtonText}>Delete client</ThemedText>
+                  </Pressable>
+                  <Pressable onPress={() => setBlockTarget(group.email)} style={styles.blockButton}>
+                    <ThemedText style={styles.blockButtonText}>Block</ThemedText>
+                  </Pressable>
                 </View>
               </View>
             )}
@@ -203,6 +247,39 @@ export default function ClientsScreen() {
             ? [{ label: deleteTarget.status === 'pending' ? 'Reject' : 'Remove', destructive: true, onPress: () => doDelete(deleteTarget) }]
             : []
         }
+      />
+
+      <ActionSheet
+        visible={!!deleteClientTarget}
+        title="Delete client?"
+        message={deleteClientTarget ? `${deleteClientTarget} — removes ALL of their projects at once. They could sign up again later.` : undefined}
+        cancelLabel="Cancel"
+        onCancel={() => setDeleteClientTarget(null)}
+        options={
+          deleteClientTarget ? [{ label: 'Delete client', destructive: true, onPress: () => doDeleteClient(deleteClientTarget) }] : []
+        }
+      />
+
+      <ActionSheet
+        visible={!!blockTarget}
+        title="Block this email?"
+        message={
+          blockTarget
+            ? `${blockTarget} — removes ALL of their projects and permanently blocks them from logging in, signing up, or using Google sign-in again. Undo it from "Blocked" in the header.`
+            : undefined
+        }
+        cancelLabel="Cancel"
+        onCancel={() => setBlockTarget(null)}
+        options={blockTarget ? [{ label: 'Block', destructive: true, onPress: () => doBlock(blockTarget) }] : []}
+      />
+
+      <ActionSheet
+        visible={showBlocked}
+        title="Blocked emails"
+        message={blockedEmails.length === 0 ? 'No blocked emails.' : 'Tap an email to unblock it.'}
+        cancelLabel="Close"
+        onCancel={() => setShowBlocked(false)}
+        options={blockedEmails.map((email) => ({ label: email, onPress: () => doUnblock(email) }))}
       />
     </ThemedView>
   );
@@ -328,6 +405,10 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: Spacing.one, flexWrap: 'wrap', marginTop: 4 },
   resetButton: { backgroundColor: '#F2F2F2', borderRadius: Radius.pill, paddingVertical: 8, paddingHorizontal: 12 },
   resetButtonText: { color: '#7A8F00', fontWeight: '700', fontSize: 12 },
+  deleteClientButton: { backgroundColor: '#F2F2F2', borderRadius: Radius.pill, paddingVertical: 8, paddingHorizontal: 12 },
+  deleteClientButtonText: { color: '#C0392B', fontWeight: '700', fontSize: 12 },
+  blockButton: { backgroundColor: '#3B1010', borderRadius: Radius.pill, paddingVertical: 8, paddingHorizontal: 12 },
+  blockButtonText: { color: '#FF8A80', fontWeight: '700', fontSize: 12 },
   smallButton: { backgroundColor: '#F2F2F2', borderRadius: Radius.pill, paddingVertical: 5, paddingHorizontal: 10 },
   smallButtonTextGreen: { color: '#7A8F00', fontWeight: '700', fontSize: 11 },
   smallButtonTextRed: { color: '#C0392B', fontWeight: '700', fontSize: 11 },

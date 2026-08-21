@@ -1,4 +1,5 @@
 import { createAccount, findAccountByEmail } from '@/lib/accounts';
+import { isEmailBlocked } from '@/lib/blocklist';
 import { getProject } from '@/lib/clickup';
 import { signToken, verifyToken } from '@/lib/session';
 
@@ -15,6 +16,10 @@ export async function POST(request: Request) {
   const pending = verifyToken<{ role: string; email: string; name: string }>(pendingToken);
   if (!pending || pending.role !== 'pending-google-client') {
     return Response.json({ error: 'Your Google sign-in expired — please try again.' }, { status: 401 });
+  }
+
+  if (await isEmailBlocked(pending.email)) {
+    return Response.json({ error: 'This email has been blocked. Contact the Portugal Production team.' }, { status: 403 });
   }
 
   const existing = await findAccountByEmail(pending.email);
