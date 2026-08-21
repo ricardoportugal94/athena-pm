@@ -47,14 +47,19 @@ export async function POST(request: Request, { id }: { id: string }) {
   const taskId = await sendMessage(id, channel, senderRole, senderName, messageBody);
   const attachment = await attachFileToMessage(taskId, file, filename);
 
+  let extractError: string | null = null;
   if (channel === 'mia') {
     const projectName = session.role === 'admin' ? (await getProject(id).catch(() => null))?.name ?? 'this project' : session.projectName;
     const extracted = await extractText(file, file.type, filename);
-    const contextForAi = extracted
-      ? `${messageBody}\n\n--- CONTENTS OF THE ATTACHED FILE "${filename}" ---\n${extracted}`
+    extractError = extracted.error;
+    const contextForAi = extracted.text
+      ? `${messageBody}\n\n--- CONTENTS OF THE ATTACHED FILE "${filename}" ---\n${extracted.text}`
       : `${messageBody} (shared a file named "${filename}", but its contents could not be read — this format isn't supported for reading)`;
     await respondAsAssistant(id, projectName, contextForAi);
   }
 
-  return Response.json({ ok: true, attachment });
+  // ?debug=1 surfaces the raw extraction error for diagnosis — never shown
+  // in the app UI, which ignores unknown response fields.
+  const debug = new URL(request.url).searchParams.get('debug') === '1';
+  return Response.json({ ok: true, attachment, ...(debug ? { extractError } : {}) });
 }

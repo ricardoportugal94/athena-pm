@@ -77,16 +77,20 @@ function detectKind(mimeType: string, filename: string): Kind {
   return null;
 }
 
-export async function extractText(file: Blob, mimeType: string, filename: string): Promise<string> {
+export type ExtractResult = { text: string; error: string | null };
+
+// `error` is populated only so a caller can surface it for diagnosis (e.g.
+// behind a debug flag) — normal callers should just check `text`.
+export async function extractText(file: Blob, mimeType: string, filename: string): Promise<ExtractResult> {
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
     const kind = detectKind(mimeType, filename);
-    if (kind === 'pdf') return truncate(await extractPdf(buffer));
-    if (kind === 'word') return truncate(await extractWord(buffer));
-    if (kind === 'excel') return truncate(extractSpreadsheet(buffer));
-    return '';
-  } catch (err) {
+    if (kind === 'pdf') return { text: truncate(await extractPdf(buffer)), error: null };
+    if (kind === 'word') return { text: truncate(await extractWord(buffer)), error: null };
+    if (kind === 'excel') return { text: truncate(extractSpreadsheet(buffer)), error: null };
+    return { text: '', error: `Unrecognized file type (mimeType="${mimeType}", filename="${filename}")` };
+  } catch (err: any) {
     console.error('Attachment text extraction failed:', err);
-    return '';
+    return { text: '', error: err?.stack ?? err?.message ?? String(err) };
   }
 }

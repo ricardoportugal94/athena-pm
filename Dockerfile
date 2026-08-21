@@ -13,6 +13,11 @@ COPY . .
 ARG EXPO_PUBLIC_GOOGLE_CLIENT_ID
 ENV EXPO_PUBLIC_GOOGLE_CLIENT_ID=$EXPO_PUBLIC_GOOGLE_CLIENT_ID
 
+# Lets /api/version report exactly which commit is actually running, instead
+# of relying on "did you deploy?" back-and-forth after every push.
+ARG GIT_SHA=unknown
+ENV GIT_SHA=$GIT_SHA
+
 RUN npx expo export -p web
 
 EXPOSE 3000

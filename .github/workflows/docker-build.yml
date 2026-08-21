@@ -32,5 +32,6 @@ jobs:
           tags: ghcr.io/${{ github.repository_owner }}/athena-pm:latest
           build-args: |
             EXPO_PUBLIC_GOOGLE_CLIENT_ID=842593789503-t5p1u7l8ps6cvk45iv0up0o1n6ufism7.apps.googleusercontent.com
+            GIT_SHA=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
