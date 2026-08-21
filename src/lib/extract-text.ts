@@ -3,7 +3,12 @@
 // Never throws — an unreadable/unsupported file just yields ''.
 
 import mammoth from 'mammoth';
-import { PDFParse } from 'pdf-parse';
+// pdfjs-dist directly, not the `pdf-parse` wrapper: pdf-parse makes
+// @napi-rs/canvas (a native binary, only needed for rendering pages as
+// images) a hard dependency, which broke npm ci in the Linux Docker build.
+// pdfjs-dist itself only lists canvas as optional — fine, since we only need
+// getTextContent(), never rendering.
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import * as XLSX from 'xlsx';
 
 const MAX_CHARS = 8000; // keeps the prompt small regardless of document size
@@ -14,12 +19,17 @@ function truncate(text: string): string {
 }
 
 async function extractPdf(buffer: Buffer): Promise<string> {
-  const parser = new PDFParse({ data: buffer });
+  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer), isEvalSupported: false, verbosity: 0 }).promise;
   try {
-    const result = await parser.getText();
-    return result.text.replace(/-- \d+ of \d+ --/g, '');
+    const pages: string[] = [];
+    for (let i = 1; i <= doc.numPages; i++) {
+      const page = await doc.getPage(i);
+      const content = await page.getTextContent();
+      pages.push(content.items.map((item: any) => item.str ?? '').join(' '));
+    }
+    return pages.join('\n');
   } finally {
-    await parser.destroy();
+    await doc.destroy();
   }
 }
 
