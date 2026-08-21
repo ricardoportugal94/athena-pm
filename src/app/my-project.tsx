@@ -23,8 +23,11 @@ export default function MyProjectScreen() {
   const [error, setError] = useState<string | null>(null);
   const [activeChat, setActiveChat] = useState<'manager' | 'mia' | null>(null);
   const [myProjects, setMyProjects] = useState<ProjectSummary[]>([]);
+  const [pendingProjects, setPendingProjects] = useState<ProjectSummary[]>([]);
   const [pickingProject, setPickingProject] = useState(false);
   const [addingProject, setAddingProject] = useState(false);
+  const [pendingNotice, setPendingNotice] = useState<string | null>(null);
+  const [showingPending, setShowingPending] = useState(false);
 
   const projectId = stored?.session.role === 'client' ? stored.session.projectId : null;
   const { unread: managerUnread, totalMessages: managerTotal } = useChatUnread(stored?.token ?? null, projectId, 'manager', 'client');
@@ -41,7 +44,13 @@ export default function MyProjectScreen() {
       .catch((e) => setError(e.message));
     if (stored.session.role === 'client') {
       api.getProjectNotes(stored.token, stored.session.projectId).then(setNotes).catch(() => {});
-      api.myProjects(stored.token).then((r) => setMyProjects(r.projects)).catch(() => {});
+      api
+        .myProjects(stored.token)
+        .then((r) => {
+          setMyProjects(r.projects);
+          setPendingProjects(r.pending);
+        })
+        .catch(() => {});
     }
   }, [stored]);
 
@@ -59,9 +68,8 @@ export default function MyProjectScreen() {
   const addProject = async (project: ProjectSummary) => {
     if (!stored) return;
     const res = await api.linkProject(stored.token, project.id);
-    setAddingProject(false);
-    setTasks(null);
-    await signIn(res);
+    setPendingProjects((prev) => [...prev, project]);
+    setPendingNotice(`Request sent for "${res.projectName}" — it'll open here once the Portugal Production team approves it.`);
   };
 
   if (loading) return null;
@@ -99,6 +107,9 @@ export default function MyProjectScreen() {
               items={[
                 ...(myProjects.length > 1 ? [{ key: 'switch', label: '🔀 Switch project', onPress: () => setPickingProject(true) }] : []),
                 { key: 'add-project', label: '+ Add project', onPress: () => setAddingProject(true) },
+                ...(pendingProjects.length > 0
+                  ? [{ key: 'pending', label: `⏳ Pending (${pendingProjects.length})`, onPress: () => setShowingPending(true) }]
+                  : []),
                 { key: 'signout', label: 'Sign out', onPress: signOut },
               ]}
             />
@@ -118,7 +129,28 @@ export default function MyProjectScreen() {
         visible={addingProject}
         title="Add another project"
         onCancel={() => setAddingProject(false)}
-        onSubmit={addProject}
+        onSubmit={async (project) => {
+          await addProject(project);
+          setAddingProject(false);
+        }}
+      />
+
+      <ActionSheet
+        visible={!!pendingNotice}
+        title="Request sent"
+        message={pendingNotice ?? undefined}
+        cancelLabel="OK"
+        onCancel={() => setPendingNotice(null)}
+        options={[]}
+      />
+
+      <ActionSheet
+        visible={showingPending}
+        title="Waiting for approval"
+        message={pendingProjects.map((p) => p.name).join('\n') || undefined}
+        cancelLabel="Close"
+        onCancel={() => setShowingPending(false)}
+        options={[]}
       />
 
       <ChatFab

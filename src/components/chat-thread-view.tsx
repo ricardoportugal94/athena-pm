@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Linking, Platform, Pressable, RefreshControl, ScrollView, StyleProp, StyleSheet, TextInput, View, ViewStyle } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -63,6 +63,7 @@ export function ChatThreadView({
   placeholder,
   pendingAttachmentName,
   onRemoveAttachment,
+  thinking,
 }: {
   responsibleName: string | null;
   subtitle: string;
@@ -86,7 +87,17 @@ export function ChatThreadView({
   placeholder?: string;
   pendingAttachmentName?: string | null;
   onRemoveAttachment?: () => void;
+  thinking?: boolean;
 }) {
+  const scrollRef = useRef<ScrollView>(null);
+
+  // Always land on the latest message — opening the thread or a new message
+  // (ours, theirs, or MIA's "thinking…" placeholder) should never leave the
+  // view sitting at the top where the conversation started.
+  useEffect(() => {
+    scrollRef.current?.scrollToEnd({ animated: true });
+  }, [messages, thinking]);
+
   const groups = useMemo(() => {
     const result: { date: string; messages: ChatMessage[] }[] = [];
     for (const m of messages) {
@@ -115,6 +126,7 @@ export function ChatThreadView({
       )}
 
       <ScrollView
+        ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.body}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -142,6 +154,11 @@ export function ChatThreadView({
               const textStyle = kind === 'team' ? styles.bubbleTextOnDark : styles.bubbleText;
               return (
                 <View key={i} style={[styles.bubbleRow, mine ? styles.bubbleRowMine : styles.bubbleRowTheirs]}>
+                  {!mine && kind === 'ai' && (
+                    <View style={styles.aiAvatar}>
+                      <ThemedText style={styles.aiAvatarText}>🤖</ThemedText>
+                    </View>
+                  )}
                   <View style={[styles.bubble, bubbleColorStyle, bubbleTailStyle]}>
                     {!mine && <ThemedText style={[styles.bubbleSender, kind === 'team' && styles.bubbleSenderOnDark]}>{m.senderName}</ThemedText>}
                     <ThemedText style={textStyle}>{m.body}</ThemedText>
@@ -161,6 +178,16 @@ export function ChatThreadView({
             })}
           </View>
         ))}
+        {thinking && (
+          <View style={[styles.bubbleRow, styles.bubbleRowTheirs]}>
+            <View style={styles.aiAvatar}>
+              <ThemedText style={styles.aiAvatarText}>🤖</ThemedText>
+            </View>
+            <View style={[styles.bubble, styles.bubbleAi, styles.bubbleTailTheirs]}>
+              <ThemedText style={styles.bubbleText}>···</ThemedText>
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       <View style={styles.composerOuter}>
@@ -278,7 +305,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     marginVertical: Spacing.two,
   },
-  bubbleRow: { flexDirection: 'row', marginBottom: Spacing.one },
+  bubbleRow: { flexDirection: 'row', marginBottom: Spacing.one, alignItems: 'flex-end', gap: 6 },
+  aiAvatar: { width: 26, height: 26, borderRadius: 13, backgroundColor: Brand.accent, alignItems: 'center', justifyContent: 'center' },
+  aiAvatarText: { fontSize: 14 },
   bubbleRowMine: { justifyContent: 'flex-end' },
   bubbleRowTheirs: { justifyContent: 'flex-start' },
   bubble: { borderRadius: Radius.card * 0.7, paddingVertical: Spacing.two, paddingHorizontal: Spacing.three, maxWidth: '78%' },

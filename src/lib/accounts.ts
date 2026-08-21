@@ -24,12 +24,15 @@ async function cu(method: string, urlPath: string, body?: unknown) {
   return json;
 }
 
+export type AccountStatus = 'active' | 'pending';
+
 export type ClientAccount = {
   taskId: string;
   email: string;
   passwordHash: string;
   projectId: string;
   projectName: string;
+  status: AccountStatus;
 };
 
 function fieldValue(task: any, fieldId: string): any {
@@ -43,6 +46,9 @@ function mapAccount(task: any): ClientAccount {
     passwordHash: fieldValue(task, accountsConfig.fields.passwordHash) ?? '',
     projectId: fieldValue(task, accountsConfig.fields.projectId) ?? '',
     projectName: fieldValue(task, accountsConfig.fields.projectName) ?? '',
+    // Rows created before this field existed have no value — treat those,
+    // and anything not explicitly "pending", as already active.
+    status: (fieldValue(task, accountsConfig.fields.status) as AccountStatus) === 'pending' ? 'pending' : 'active',
   };
 }
 
@@ -71,11 +77,21 @@ export async function setPasswordHash(taskId: string, passwordHash: string): Pro
   await cu('POST', `/task/${taskId}/field/${accountsConfig.fields.passwordHash}`, { value: passwordHash });
 }
 
+export async function setStatus(taskId: string, status: AccountStatus): Promise<void> {
+  await cu('POST', `/task/${taskId}/field/${accountsConfig.fields.status}`, { value: status });
+}
+
 export async function deleteAccount(taskId: string): Promise<void> {
   await cu('DELETE', `/task/${taskId}`);
 }
 
-export async function createAccount(email: string, passwordHash: string, projectId: string, projectName: string): Promise<ClientAccount> {
+export async function createAccount(
+  email: string,
+  passwordHash: string,
+  projectId: string,
+  projectName: string,
+  status: AccountStatus = 'active'
+): Promise<ClientAccount> {
   const task = await cu('POST', `/list/${accountsConfig.listId}/task`, {
     name: email,
     custom_fields: [
@@ -83,6 +99,7 @@ export async function createAccount(email: string, passwordHash: string, project
       { id: accountsConfig.fields.passwordHash, value: passwordHash },
       { id: accountsConfig.fields.projectId, value: projectId },
       { id: accountsConfig.fields.projectName, value: projectName },
+      { id: accountsConfig.fields.status, value: status },
     ],
   });
   return mapAccount(task);

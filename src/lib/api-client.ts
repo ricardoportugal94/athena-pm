@@ -52,12 +52,16 @@ export const api = {
   selectProject: (pendingToken: string, projectId: string): Promise<AuthResult> =>
     request('/api/auth/select-project', { method: 'POST', body: JSON.stringify({ pendingToken, projectId }) }),
 
-  myProjects: (token: string): Promise<{ projects: ProjectSummary[] }> => request('/api/auth/my-projects', { token }),
+  myProjects: (token: string): Promise<{ projects: ProjectSummary[]; pending: ProjectSummary[] }> =>
+    request('/api/auth/my-projects', { token }),
 
   switchProject: (token: string, projectId: string): Promise<AuthResult> =>
     request('/api/auth/my-projects', { method: 'POST', token, body: JSON.stringify({ projectId }) }),
 
-  linkProject: (token: string, projectId: string): Promise<AuthResult> =>
+  // Requests another project be linked to the caller's own client account —
+  // stays pending until an admin approves it, so this never returns a
+  // session to sign into right away.
+  linkProject: (token: string, projectId: string): Promise<{ pending: true; projectName: string }> =>
     request('/api/auth/link-project', { method: 'POST', token, body: JSON.stringify({ projectId }) }),
 
   searchProjects: (query: string): Promise<ProjectSummary[]> =>
@@ -73,7 +77,9 @@ export const api = {
 
   deleteProject: (token: string, projectId: string) => request(`/api/projects/${projectId}`, { method: 'DELETE', token }),
 
-  listClientAccounts: (token: string): Promise<{ taskId: string; email: string; projectId: string; projectName: string }[]> =>
+  listClientAccounts: (
+    token: string
+  ): Promise<{ taskId: string; email: string; projectId: string; projectName: string; status: 'active' | 'pending' }[]> =>
     request('/api/client-accounts', { token }),
 
   addClientAccount: (token: string, email: string, projectId: string): Promise<{ ok: true; tempPassword: string | null }> =>
@@ -81,6 +87,8 @@ export const api = {
 
   resetClientPassword: (token: string, taskId: string): Promise<{ tempPassword: string }> =>
     request(`/api/client-accounts/${taskId}/reset-password`, { method: 'POST', token }),
+
+  approveClientAccount: (token: string, taskId: string) => request(`/api/client-accounts/${taskId}/approve`, { method: 'POST', token }),
 
   deleteClientAccount: (token: string, taskId: string) => request(`/api/client-accounts/${taskId}`, { method: 'DELETE', token }),
 

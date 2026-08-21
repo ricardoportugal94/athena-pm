@@ -1,14 +1,14 @@
 import { createAccount, findAccountsByEmail } from '@/lib/accounts';
 import { getProject } from '@/lib/clickup';
-import { requireAuth, signToken } from '@/lib/session';
+import { requireAuth } from '@/lib/session';
 
-const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
-
-// Body: { projectId }. Lets an already-signed-in client link ANOTHER
-// existing project to their own account — same self-service "search and
-// join" as signup, just without re-entering a password since they're
-// already proven to be that email. Returns a session for the new project,
-// same as switch-project, so adding one also opens it right away.
+// Body: { projectId }. Lets an already-signed-in client request ANOTHER
+// existing project be linked to their own account — same self-service
+// "search and join" as signup, without re-entering a password since
+// they're already proven to be that email. Unlike switch-project, this
+// does NOT grant access right away: it creates a "pending" row an admin
+// has to approve first, so the team keeps control over which projects a
+// client can actually open.
 export async function POST(request: Request) {
   const session = requireAuth(request);
   if (session instanceof Response) return session;
@@ -26,9 +26,7 @@ export async function POST(request: Request) {
   }
 
   const passwordHash = accounts[0]?.passwordHash ?? '';
-  await createAccount(session.email, passwordHash, project.id, project.name);
+  await createAccount(session.email, passwordHash, project.id, project.name, 'pending');
 
-  const newSession = { role: 'client' as const, email: session.email, projectId: project.id, projectName: project.name };
-  const token = signToken(newSession, THIRTY_DAYS_MS);
-  return Response.json({ token, session: newSession }, { status: 201 });
+  return Response.json({ pending: true, projectName: project.name }, { status: 201 });
 }

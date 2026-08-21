@@ -11,6 +11,14 @@ import { pickAttachment, type PickedAttachment } from '@/lib/pick-document';
 
 type Channel = 'manager' | 'mia';
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// MIA's reply is only ever known once the send request itself resolves (the
+// server drafts it before responding) — this is a floor, not a fixed wait:
+// slow replies aren't cut short, fast ones just get a beat to feel less like
+// an instant, unnatural reflex.
+const MIA_MIN_THINKING_MS = 2000;
+
 // A small floating panel anchored above the ChatFab — like a standard
 // website support widget — instead of navigating to a full-screen page.
 // Two independent lines share this same component, picked by `channel`:
@@ -35,6 +43,8 @@ export function ChatWidget({
 }) {
   const [responsible, setResponsible] = useState<{ id: number; name: string } | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [optimistic, setOptimistic] = useState<ChatMessage[]>([]);
+  const [thinking, setThinking] = useState(false);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [attaching, setAttaching] = useState(false);
@@ -44,7 +54,7 @@ export function ChatWidget({
   const [pickingResponsible, setPickingResponsible] = useState(false);
 
   const load = () => {
-    api
+    return api
       .getChat(token, projectId, channel)
       .then((r) => {
         setResponsible(r.responsible);
@@ -65,21 +75,38 @@ export function ChatWidget({
 
   const send = async () => {
     if (sending || (!text.trim() && !pendingAttachment)) return;
+    const outgoingText = text.trim();
+    const attachment = pendingAttachment;
     setSending(true);
+    setError(null);
+    // Show the sender's own message right away — the real request (and, on
+    // MIA's channel, her reply) can take a while, and there's no reason to
+    // make the person wait to see what they just typed.
+    setOptimistic((prev) => [
+      ...prev,
+      { senderRole: role, senderName: '', body: outgoingText || (attachment ? `📎 ${attachment.name}` : ''), sentAt: new Date().toISOString() },
+    ]);
+    setText('');
+    setPendingAttachment(null);
+    if (channel === 'mia') setThinking(true);
     try {
-      if (pendingAttachment) {
-        pendingAttachment.form.append('text', text.trim());
-        await api.sendChatAttachment(token, projectId, channel, pendingAttachment.form);
-        setPendingAttachment(null);
-      } else {
-        await api.sendChatMessage(token, projectId, channel, text.trim());
-      }
-      setText('');
-      load();
+      const request = attachment
+        ? (() => {
+            attachment.form.append('text', outgoingText);
+            return api.sendChatAttachment(token, projectId, channel, attachment.form);
+          })()
+        : api.sendChatMessage(token, projectId, channel, outgoingText);
+      // MIA's answer is only known once the request itself resolves — this
+      // just makes sure it never reveals faster than a natural "thinking"
+      // beat, without ever holding back a reply that took longer than that.
+      await (channel === 'mia' ? Promise.all([request, sleep(MIA_MIN_THINKING_MS)]) : request);
+      await load();
     } catch (e: any) {
       setError(e.message);
     } finally {
       setSending(false);
+      setThinking(false);
+      setOptimistic([]);
     }
   };
 
@@ -142,8 +169,9 @@ export function ChatWidget({
           showHeader={false}
           responsibleName={null}
           subtitle=""
-          messages={messages}
+          messages={[...messages, ...optimistic]}
           mineRole={role}
+          thinking={thinking}
           placeholder={placeholder}
           text={text}
           onChangeText={setText}

@@ -85,28 +85,36 @@ export default function LoginScreen() {
           <ThemedText style={styles.subtitle}>THE SDP MATRIX</ThemedText>
 
           {mode === 'start' && (
-            <>
-              <View style={styles.googleGroup}>
-                <Pressable style={styles.googleButton} disabled={!request || submitting} onPress={() => promptAsync()}>
-                  {submitting ? <ActivityIndicator color={Brand.ink} /> : <ThemedText style={styles.googleButtonText}>LOG IN WITH GOOGLE</ThemedText>}
-                </Pressable>
-                <ThemedText style={styles.hint}>
-                  @rstivali.pt signs in as team. Clients can use Google too — first time, you&apos;ll just pick your project.
-                </ThemedText>
-              </View>
-
-              <Pressable style={styles.googleButton} onPress={() => setMode('login')}>
-                <ThemedText style={styles.googleButtonText}>Sign up with client account</ThemedText>
+            <View style={styles.startGroup}>
+              <Pressable style={styles.button} onPress={() => setMode('login')}>
+                <ThemedText style={styles.buttonText}>LOGIN</ThemedText>
               </Pressable>
-
-              <Pressable onPress={() => setMode('signup')}>
-                <ThemedText style={styles.link}>Sign up</ThemedText>
+              <Pressable style={styles.button} onPress={() => setMode('signup')}>
+                <ThemedText style={styles.buttonText}>SIGN UP</ThemedText>
               </Pressable>
-            </>
+              <ThemedText style={styles.hint}>@rstivali.pt signs in as team via Google.</ThemedText>
+            </View>
           )}
 
-          {mode === 'signup' && <SignupForm onBack={() => setMode('start')} onDone={signIn} />}
-          {mode === 'login' && <LoginForm onBack={() => setMode('start')} onDone={signIn} onNeedsPick={showPicker} />}
+          {mode === 'signup' && (
+            <SignupForm
+              onBack={() => setMode('start')}
+              onDone={signIn}
+              onGoogle={() => promptAsync()}
+              googleDisabled={!request || submitting}
+              googleSubmitting={submitting}
+            />
+          )}
+          {mode === 'login' && (
+            <LoginForm
+              onBack={() => setMode('start')}
+              onDone={signIn}
+              onNeedsPick={showPicker}
+              onGoogle={() => promptAsync()}
+              googleDisabled={!request || submitting}
+              googleSubmitting={submitting}
+            />
+          )}
           {mode === 'google-project' && pendingGoogleToken && (
             <GoogleProjectForm pendingToken={pendingGoogleToken} onBack={() => setMode('start')} onDone={signIn} />
           )}
@@ -125,7 +133,19 @@ export default function LoginScreen() {
   );
 }
 
-function SignupForm({ onBack, onDone }: { onBack: () => void; onDone: (r: any) => void }) {
+function SignupForm({
+  onBack,
+  onDone,
+  onGoogle,
+  googleDisabled,
+  googleSubmitting,
+}: {
+  onBack: () => void;
+  onDone: (r: any) => void;
+  onGoogle: () => void;
+  googleDisabled: boolean;
+  googleSubmitting: boolean;
+}) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [query, setQuery] = useState('');
@@ -186,6 +206,11 @@ function SignupForm({ onBack, onDone }: { onBack: () => void; onDone: (r: any) =
       <Pressable style={styles.button} onPress={submit} disabled={submitting}>
         {submitting ? <ActivityIndicator color={Brand.ink} /> : <ThemedText style={styles.buttonText}>SIGN UP</ThemedText>}
       </Pressable>
+
+      <Pressable style={styles.googleButton} disabled={googleDisabled} onPress={onGoogle}>
+        {googleSubmitting ? <ActivityIndicator color={Brand.ink} /> : <ThemedText style={styles.googleButtonText}>SIGN UP WITH GOOGLE</ThemedText>}
+      </Pressable>
+
       <Pressable onPress={onBack} style={styles.backLink}>
         <ThemedText style={styles.link}>← Back</ThemedText>
       </Pressable>
@@ -313,10 +338,16 @@ function LoginForm({
   onBack,
   onDone,
   onNeedsPick,
+  onGoogle,
+  googleDisabled,
+  googleSubmitting,
 }: {
   onBack: () => void;
   onDone: (r: any) => void;
   onNeedsPick: (pendingToken: string, projects: ProjectSummary[]) => void;
+  onGoogle: () => void;
+  googleDisabled: boolean;
+  googleSubmitting: boolean;
 }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -327,6 +358,7 @@ function LoginForm({
   const submit = async () => {
     setSubmitting(true);
     setError(null);
+    setShowForgot(false);
     try {
       const res = await api.login(email, password);
       if ('needsProjectPick' in res) {
@@ -352,10 +384,17 @@ function LoginForm({
         {submitting ? <ActivityIndicator color={Brand.ink} /> : <ThemedText style={styles.buttonText}>LOG IN</ThemedText>}
       </Pressable>
 
-      <Pressable onPress={() => setShowForgot((v) => !v)} style={styles.backLink}>
-        <ThemedText style={styles.link}>Forgot password</ThemedText>
-      </Pressable>
+      {/* Only surfaced after a failed attempt — no reason to advertise it upfront. */}
+      {!!error && (
+        <Pressable onPress={() => setShowForgot((v) => !v)} style={styles.backLink}>
+          <ThemedText style={styles.link}>Forgot password</ThemedText>
+        </Pressable>
+      )}
       {showForgot && <ThemedText style={styles.forgotHint}>Contact the Portugal Production team to have your password reset.</ThemedText>}
+
+      <Pressable style={styles.googleButton} disabled={googleDisabled} onPress={onGoogle}>
+        {googleSubmitting ? <ActivityIndicator color={Brand.ink} /> : <ThemedText style={styles.googleButtonText}>LOGIN WITH GOOGLE</ThemedText>}
+      </Pressable>
 
       <Pressable onPress={onBack} style={styles.backLink}>
         <ThemedText style={styles.link}>← Back</ThemedText>
@@ -372,10 +411,7 @@ const styles = StyleSheet.create({
   subtitle: { color: '#8A8A8A', fontSize: 12, fontWeight: '700', letterSpacing: 2, marginTop: -Spacing.two, marginBottom: Spacing.two },
   googleButton: { alignSelf: 'stretch', backgroundColor: Brand.accent, borderRadius: Radius.pill, paddingVertical: Spacing.three, alignItems: 'center' },
   googleButtonText: { color: Brand.ink, fontWeight: '800' },
-  // Tighter than the card's default gap — this hint only qualifies the
-  // button right above it, so it should read as attached to it, not as a
-  // separate item evenly spaced from everything else.
-  googleGroup: { alignSelf: 'stretch', gap: Spacing.one },
+  startGroup: { alignSelf: 'stretch', gap: Spacing.two },
   hint: { color: '#9A9A9A', fontSize: 12, textAlign: 'center' },
   link: { color: '#8CA300', fontWeight: '700' },
   backLink: { alignItems: 'center' },

@@ -13,7 +13,7 @@ import { Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { api, type ProjectSummary } from '@/lib/api-client';
 
-type ClientAccountRow = { taskId: string; email: string; projectId: string; projectName: string };
+type ClientAccountRow = { taskId: string; email: string; projectId: string; projectName: string; status: 'active' | 'pending' };
 
 export default function ClientsScreen() {
   const { stored } = useAuth();
@@ -45,6 +45,15 @@ export default function ClientsScreen() {
   const doDelete = async (account: ClientAccountRow) => {
     try {
       await api.deleteClientAccount(token, account.taskId);
+      load();
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  const doApprove = async (account: ClientAccountRow) => {
+    try {
+      await api.approveClientAccount(token, account.taskId);
       load();
     } catch (e: any) {
       setError(e.message);
@@ -98,18 +107,38 @@ export default function ClientsScreen() {
             renderItem={({ item }) => (
               <View style={styles.card}>
                 <View style={styles.cardMain}>
-                  <ThemedText type="smallBold" style={styles.email}>
-                    {item.email}
-                  </ThemedText>
+                  <View style={styles.cardTitleRow}>
+                    <ThemedText type="smallBold" style={styles.email}>
+                      {item.email}
+                    </ThemedText>
+                    {item.status === 'pending' && (
+                      <View style={styles.pendingBadge}>
+                        <ThemedText style={styles.pendingBadgeText}>Pending approval</ThemedText>
+                      </View>
+                    )}
+                  </View>
                   <ThemedText style={styles.projectName}>{item.projectName}</ThemedText>
                 </View>
                 <View style={styles.actions}>
-                  <Pressable onPress={() => setResetTarget(item)} style={styles.resetButton}>
-                    <ThemedText style={styles.resetButtonText}>Reset password</ThemedText>
-                  </Pressable>
-                  <Pressable onPress={() => setDeleteTarget(item)} style={styles.deleteButton}>
-                    <ThemedText style={styles.deleteButtonText}>Delete</ThemedText>
-                  </Pressable>
+                  {item.status === 'pending' ? (
+                    <>
+                      <Pressable onPress={() => doApprove(item)} style={styles.resetButton}>
+                        <ThemedText style={styles.resetButtonText}>Approve</ThemedText>
+                      </Pressable>
+                      <Pressable onPress={() => setDeleteTarget(item)} style={styles.deleteButton}>
+                        <ThemedText style={styles.deleteButtonText}>Reject</ThemedText>
+                      </Pressable>
+                    </>
+                  ) : (
+                    <>
+                      <Pressable onPress={() => setResetTarget(item)} style={styles.resetButton}>
+                        <ThemedText style={styles.resetButtonText}>Reset password</ThemedText>
+                      </Pressable>
+                      <Pressable onPress={() => setDeleteTarget(item)} style={styles.deleteButton}>
+                        <ThemedText style={styles.deleteButtonText}>Delete</ThemedText>
+                      </Pressable>
+                    </>
+                  )}
                 </View>
               </View>
             )}
@@ -144,11 +173,21 @@ export default function ClientsScreen() {
 
       <ActionSheet
         visible={!!deleteTarget}
-        title="Delete client?"
-        message={deleteTarget ? `${deleteTarget.email} — Deletes the client's account. The project and its tasks in ClickUp are not affected.` : undefined}
+        title={deleteTarget?.status === 'pending' ? 'Reject request?' : 'Delete client?'}
+        message={
+          deleteTarget
+            ? deleteTarget.status === 'pending'
+              ? `${deleteTarget.email} — won't gain access to "${deleteTarget.projectName}". Their other project(s), if any, are not affected.`
+              : `${deleteTarget.email} — Deletes the client's account. The project and its tasks in ClickUp are not affected.`
+            : undefined
+        }
         cancelLabel="Cancel"
         onCancel={() => setDeleteTarget(null)}
-        options={deleteTarget ? [{ label: 'Delete', destructive: true, onPress: () => doDelete(deleteTarget) }] : []}
+        options={
+          deleteTarget
+            ? [{ label: deleteTarget.status === 'pending' ? 'Reject' : 'Delete', destructive: true, onPress: () => doDelete(deleteTarget) }]
+            : []
+        }
       />
     </ThemedView>
   );
@@ -257,6 +296,9 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   cardMain: { gap: 2 },
+  cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one, flexWrap: 'wrap' },
+  pendingBadge: { backgroundColor: '#FFF1CC', borderRadius: Radius.pill, paddingVertical: 2, paddingHorizontal: 8 },
+  pendingBadgeText: { color: '#8A6D00', fontWeight: '700', fontSize: 10 },
   email: { color: '#1C1C1C', fontSize: 15 },
   projectName: { color: '#8A8A8A', fontSize: 12, fontWeight: '600' },
   actions: { flexDirection: 'row', gap: Spacing.one, flexWrap: 'wrap' },

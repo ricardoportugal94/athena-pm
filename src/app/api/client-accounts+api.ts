@@ -11,7 +11,9 @@ export async function GET(request: Request) {
   if (session instanceof Response) return session;
 
   const accounts = await listAccounts();
-  return Response.json(accounts.map((a) => ({ taskId: a.taskId, email: a.email, projectId: a.projectId, projectName: a.projectName })));
+  return Response.json(
+    accounts.map((a) => ({ taskId: a.taskId, email: a.email, projectId: a.projectId, projectName: a.projectName, status: a.status }))
+  );
 }
 
 // Body: { email, projectId }. Links a client to a project — same email

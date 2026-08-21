@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   }
 
   const accounts = await findAccountsByEmail(pending.email);
-  const match = accounts.find((a) => a.projectId === projectId);
+  const match = accounts.find((a) => a.projectId === projectId && a.status === 'active');
   if (!match) return Response.json({ error: 'That project is not linked to this account.' }, { status: 403 });
 
   const session = { role: 'client' as const, email: match.email, projectId: match.projectId, projectName: match.projectName };
