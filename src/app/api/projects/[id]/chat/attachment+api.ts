@@ -1,5 +1,6 @@
 import { attachFileToMessage, respondAsAssistant, sendMessage, type Channel } from '@/lib/chat';
 import { getProject } from '@/lib/clickup';
+import { extractText } from '@/lib/extract-text';
 import { requireAuth, type Session } from '@/lib/session';
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
@@ -21,9 +22,9 @@ async function authorizeForProject(request: Request, projectId: string): Promise
   return session;
 }
 
-// multipart/form-data: { file, text?, channel? }. MIA can't read the file's
-// contents, but she still gets told a file was shared (filename + caption)
-// so it shows up in her thread and feeds her daily memory review.
+// multipart/form-data: { file, text?, channel? }. On MIA's channel, the
+// file's text is best-effort extracted (PDF/Word/Excel) so she can actually
+// answer questions about it, not just acknowledge a filename.
 export async function POST(request: Request, { id }: { id: string }) {
   const session = await authorizeForProject(request, id);
   if (session instanceof Response) return session;
@@ -48,7 +49,11 @@ export async function POST(request: Request, { id }: { id: string }) {
 
   if (channel === 'mia') {
     const projectName = session.role === 'admin' ? (await getProject(id).catch(() => null))?.name ?? 'this project' : session.projectName;
-    await respondAsAssistant(id, projectName, `${messageBody} (shared a file named "${filename}")`);
+    const extracted = await extractText(file, file.type);
+    const contextForAi = extracted
+      ? `${messageBody}\n\n--- CONTENTS OF THE ATTACHED FILE "${filename}" ---\n${extracted}`
+      : `${messageBody} (shared a file named "${filename}", but its contents could not be read — this format isn't supported for reading)`;
+    await respondAsAssistant(id, projectName, contextForAi);
   }
 
   return Response.json({ ok: true, attachment });

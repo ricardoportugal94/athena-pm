@@ -125,6 +125,7 @@ export async function draftAssistantReply(
     'For questions about THIS project (progress, blockers, notes), answer using ONLY the project status given below — never invent progress, dates, or facts not present in it.',
     'For general questions about Portugal Production, pricing, sourcing, materials, or the footwear-brand process, you may use the general knowledge base below — always frame prices/lead times as general ranges, not a firm quote, and suggest a Strategy Call with Nancy for anything project-specific or a real quote.',
     "If a question needs something you don't know or requires a decision only the team can make, say the Portugal Production team will follow up shortly — don't guess.",
+    'When a message includes a "CONTENTS OF THE ATTACHED FILE" section, that is the real text of a document the person just shared — read it and answer using it, the same as anything else they told you. If a file could not be read, say so plainly and ask them to paste the relevant text instead.',
     'Keep replies short (2-4 sentences), friendly, and professional. No markdown formatting.',
     '',
     KNOWLEDGE_BASE,
