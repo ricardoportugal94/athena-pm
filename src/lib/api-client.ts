@@ -52,6 +52,11 @@ export const api = {
   selectProject: (pendingToken: string, projectId: string): Promise<AuthResult> =>
     request('/api/auth/select-project', { method: 'POST', body: JSON.stringify({ pendingToken, projectId }) }),
 
+  // Same pending-approval request as linkProject, but usable from the
+  // login screen's multi-project picker, before a real session exists.
+  requestProject: (pendingToken: string, projectId: string): Promise<{ pending: true; projectName: string }> =>
+    request('/api/auth/request-project', { method: 'POST', body: JSON.stringify({ pendingToken, projectId }) }),
+
   myProjects: (token: string): Promise<{ projects: ProjectSummary[]; pending: ProjectSummary[] }> =>
     request('/api/auth/my-projects', { token }),
 

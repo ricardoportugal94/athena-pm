@@ -18,10 +18,9 @@ import { useAuth } from '@/hooks/use-auth';
 import { useChatUnread } from '@/hooks/use-chat-unread';
 import { useThemeToggle } from '@/hooks/use-theme';
 import { api, type TeamMember } from '@/lib/api-client';
-
-const MIA_AVATAR = require('@/assets/images/mia-avatar.png');
 import { CATEGORY_LABEL_EN, englishTaskName } from '@/lib/task-names';
 
+const MIA_AVATAR = require('@/assets/images/mia-avatar.png');
 const PHASE_LABEL_EN: Record<number, string> = { 1: '1. Prepare', 2: '2. Test', 3: '3. Make' };
 
 type SdpTask = {
