@@ -3,6 +3,7 @@
 // Never throws — an unreadable/unsupported file just yields ''.
 
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import mammoth from 'mammoth';
 // pdfjs-dist directly, not the `pdf-parse` wrapper: pdf-parse makes
 // @napi-rs/canvas (a native binary, only needed for rendering pages as
@@ -20,6 +21,14 @@ const MAX_CHARS = 8000; // keeps the prompt small regardless of document size
 // mis-extracts (or throws) for PDFs using standard/non-embedded or CJK
 // fonts — a common case for real-world exported documents.
 const PDFJS_ROOT = join(process.cwd(), 'node_modules/pdfjs-dist');
+
+// pdfjs normally locates its worker module via a relative import from its
+// own file — Metro bundles everything into one file, which breaks that
+// resolution ("Cannot find module '.../pdf.worker.mjs'"). Pointing it at the
+// real on-disk file (same trick as the fonts/cmaps above) fixes it — as a
+// file:// URL, since Node's dynamic import() rejects bare filesystem paths
+// (fails on both Windows drive-letter paths and plain POSIX paths).
+pdfjsLib.GlobalWorkerOptions.workerSrc = pathToFileURL(join(PDFJS_ROOT, 'legacy/build/pdf.worker.mjs')).href;
 
 function truncate(text: string): string {
   const trimmed = text.trim();
