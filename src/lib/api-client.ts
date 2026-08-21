@@ -7,7 +7,6 @@ import { Platform } from 'react-native';
 export type TeamMember = { id: number; username: string };
 export type ProjectSummary = { id: string; name: string };
 export type ProjectWithStats = ProjectSummary & { done: number; total: number; percent: number; blocked: number; url: string };
-export type NeedsProjectPick = { needsProjectPick: true; pendingToken: string; projects: ProjectSummary[] };
 export type AuthResult = { token: string; session: any };
 
 // Native builds have no "same origin" to call relative paths against — they
@@ -33,11 +32,7 @@ async function request(path: string, opts: RequestInit & { token?: string | null
 export const api = {
   teamMembers: (token: string): Promise<TeamMember[]> => request('/api/team-members', { token }),
 
-  googleLogin: (
-    code: string,
-    redirectUri: string,
-    codeVerifier?: string
-  ): Promise<AuthResult | { needsProject: true; pendingToken: string } | NeedsProjectPick> =>
+  googleLogin: (code: string, redirectUri: string, codeVerifier?: string): Promise<AuthResult | { needsProject: true; pendingToken: string }> =>
     request('/api/auth/google', { method: 'POST', body: JSON.stringify({ code, redirectUri, codeVerifier }) }),
 
   completeGoogleSignup: (pendingToken: string, projectId: string) =>
@@ -46,16 +41,8 @@ export const api = {
   signup: (email: string, password: string, projectId: string) =>
     request('/api/auth/signup', { method: 'POST', body: JSON.stringify({ email, password, projectId }) }),
 
-  login: (email: string, password: string): Promise<AuthResult | NeedsProjectPick> =>
+  login: (email: string, password: string): Promise<AuthResult> =>
     request('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
-
-  selectProject: (pendingToken: string, projectId: string): Promise<AuthResult> =>
-    request('/api/auth/select-project', { method: 'POST', body: JSON.stringify({ pendingToken, projectId }) }),
-
-  // Same pending-approval request as linkProject, but usable from the
-  // login screen's multi-project picker, before a real session exists.
-  requestProject: (pendingToken: string, projectId: string): Promise<{ pending: true; projectName: string }> =>
-    request('/api/auth/request-project', { method: 'POST', body: JSON.stringify({ pendingToken, projectId }) }),
 
   myProjects: (token: string): Promise<{ projects: ProjectWithStats[]; pending: ProjectSummary[] }> =>
     request('/api/auth/my-projects', { token }),

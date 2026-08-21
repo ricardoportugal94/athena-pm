@@ -5,7 +5,6 @@ import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 
-import { ProjectSearchModal } from '@/components/project-search-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -18,7 +17,7 @@ WebBrowser.maybeCompleteAuthSession();
 const GOOGLE_DISCOVERY = { authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth' };
 const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID!;
 
-type Mode = 'start' | 'signup' | 'login' | 'google-project' | 'pick-project';
+type Mode = 'start' | 'signup' | 'login' | 'google-project';
 
 export default function LoginScreen() {
   const { stored, loading, signIn } = useAuth();
@@ -27,14 +26,6 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [pendingGoogleToken, setPendingGoogleToken] = useState<string | null>(null);
-  const [pendingPickToken, setPendingPickToken] = useState<string | null>(null);
-  const [pickProjects, setPickProjects] = useState<ProjectSummary[]>([]);
-
-  const showPicker = (pendingToken: string, projects: ProjectSummary[]) => {
-    setPendingPickToken(pendingToken);
-    setPickProjects(projects);
-    setMode('pick-project');
-  };
 
   const redirectUri = AuthSession.makeRedirectUri();
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
@@ -60,8 +51,6 @@ export default function LoginScreen() {
           if ('needsProject' in res) {
             setPendingGoogleToken(res.pendingToken);
             setMode('google-project');
-          } else if ('needsProjectPick' in res) {
-            showPicker(res.pendingToken, res.projects);
           } else {
             return signIn(res);
           }
@@ -74,7 +63,10 @@ export default function LoginScreen() {
   }, [response]);
 
   if (loading) return null;
-  if (stored) return <Redirect href={stored.session.role === 'admin' ? '/team' : '/my-project'} />;
+  // Clients always land on "My Projects" first — same as admins landing on
+  // their own project list — and pick which one to actually open there,
+  // whether they have one project or several.
+  if (stored) return <Redirect href={stored.session.role === 'admin' ? '/team' : '/my-projects'} />;
 
   return (
     <ThemedView style={styles.screen}>
@@ -110,7 +102,6 @@ export default function LoginScreen() {
             <LoginForm
               onBack={() => setMode('start')}
               onDone={signIn}
-              onNeedsPick={showPicker}
               onGoogle={() => promptAsync()}
               googleDisabled={!request || submitting}
               googleSubmitting={submitting}
@@ -118,9 +109,6 @@ export default function LoginScreen() {
           )}
           {mode === 'google-project' && pendingGoogleToken && (
             <GoogleProjectForm pendingToken={pendingGoogleToken} onBack={() => setMode('start')} onDone={signIn} />
-          )}
-          {mode === 'pick-project' && pendingPickToken && (
-            <PickProjectForm pendingToken={pendingPickToken} projects={pickProjects} onBack={() => setMode('start')} onDone={signIn} />
           )}
 
           {error && <ThemedText style={styles.error}>{error}</ThemedText>}
@@ -287,105 +275,15 @@ function GoogleProjectForm({ pendingToken, onBack, onDone }: { pendingToken: str
   );
 }
 
-// Shown after login/Google sign-in when that email is linked to more than
-// one project — a fixed short list to tap, not a search box.
-// Shown when the client's email is linked to more than one project. Same
-// "search bar + button" shape as the admin's own project list (team/index),
-// except the button requests access to another project instead of creating
-// one — and the list below it never shows anything but projects this client
-// is already linked to.
-function PickProjectForm({
-  pendingToken,
-  projects,
-  onBack,
-  onDone,
-}: {
-  pendingToken: string;
-  projects: ProjectSummary[];
-  onBack: () => void;
-  onDone: (r: any) => void;
-}) {
-  const [query, setQuery] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState<string | null>(null);
-  const [addingProject, setAddingProject] = useState(false);
-  const [pendingNotice, setPendingNotice] = useState<string | null>(null);
-
-  const filtered = projects.filter((p) => p.name.toLowerCase().includes(query.trim().toLowerCase()));
-
-  const pick = async (project: ProjectSummary) => {
-    setSubmitting(project.id);
-    setError(null);
-    try {
-      const res = await api.selectProject(pendingToken, project.id);
-      await onDone(res);
-    } catch (e: any) {
-      setError(e.message);
-      setSubmitting(null);
-    }
-  };
-
-  const requestProject = async (project: ProjectSummary) => {
-    const res = await api.requestProject(pendingToken, project.id);
-    setAddingProject(false);
-    setPendingNotice(`Request sent for "${res.projectName}" — it'll show up here once the Portugal Production team approves it.`);
-  };
-
-  return (
-    <View style={styles.form}>
-      <ThemedText style={styles.hint}>You have more than one project — which one do you want to open?</ThemedText>
-
-      <View style={styles.newRow}>
-        <TextInput
-          placeholderTextColor="#9A9A9A"
-          style={styles.searchInput}
-          placeholder="Search your projects…"
-          value={query}
-          onChangeText={setQuery}
-        />
-        <Pressable style={styles.addProjectButton} onPress={() => setAddingProject(true)}>
-          <ThemedText style={styles.addProjectButtonText}>+ Add project</ThemedText>
-        </Pressable>
-      </View>
-
-      {pendingNotice && <ThemedText style={styles.hint}>{pendingNotice}</ThemedText>}
-
-      <ThemedView style={styles.resultsBox}>
-        {filtered.length === 0 && <ThemedText style={styles.noResultsText}>No project matches your search.</ThemedText>}
-        {filtered.map((p) => (
-          <Pressable key={p.id} onPress={() => pick(p)} disabled={!!submitting} style={styles.resultRow}>
-            {submitting === p.id ? <ActivityIndicator color={Brand.ink} /> : <ThemedText style={styles.resultRowText}>{p.name}</ThemedText>}
-          </Pressable>
-        ))}
-      </ThemedView>
-
-      {error && <ThemedText style={styles.error}>{error}</ThemedText>}
-
-      <Pressable onPress={onBack} style={styles.backLink}>
-        <ThemedText style={styles.link}>← Back</ThemedText>
-      </Pressable>
-
-      <ProjectSearchModal
-        visible={addingProject}
-        title="Request another project"
-        onCancel={() => setAddingProject(false)}
-        onSubmit={requestProject}
-      />
-    </View>
-  );
-}
-
 function LoginForm({
   onBack,
   onDone,
-  onNeedsPick,
   onGoogle,
   googleDisabled,
   googleSubmitting,
 }: {
   onBack: () => void;
   onDone: (r: any) => void;
-  onNeedsPick: (pendingToken: string, projects: ProjectSummary[]) => void;
   onGoogle: () => void;
   googleDisabled: boolean;
   googleSubmitting: boolean;
@@ -402,11 +300,7 @@ function LoginForm({
     setShowForgot(false);
     try {
       const res = await api.login(email, password);
-      if ('needsProjectPick' in res) {
-        onNeedsPick(res.pendingToken, res.projects);
-      } else {
-        await onDone(res);
-      }
+      await onDone(res);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -464,17 +358,6 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     fontSize: 16,
   },
-  newRow: { flexDirection: 'row', gap: Spacing.two },
-  searchInput: {
-    flex: 1,
-    backgroundColor: '#F2F2F2',
-    color: '#1C1C1C',
-    borderRadius: Radius.card * 0.7,
-    padding: Spacing.three,
-    fontSize: 14,
-  },
-  addProjectButton: { backgroundColor: Brand.accent, borderRadius: Radius.pill, paddingHorizontal: Spacing.three, justifyContent: 'center' },
-  addProjectButtonText: { color: Brand.ink, fontWeight: '800', fontSize: 12 },
   resultsBox: { backgroundColor: '#F2F2F2', borderRadius: Radius.small, overflow: 'hidden' },
   resultRow: { padding: Spacing.two, borderBottomWidth: 1, borderBottomColor: '#E5E5E5' },
   resultRowText: { color: '#1C1C1C' },

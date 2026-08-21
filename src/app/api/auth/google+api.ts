@@ -60,13 +60,11 @@ export async function POST(request: Request) {
   // email/password signup form, before an account gets created for them.
   const account = await findAccountByEmail(info.email);
   if (account) {
-    // Same email can be linked to more than one project — let them pick.
-    // Pending self-service requests aren't openable yet.
+    // Same email can be linked to more than one active project — the
+    // session lands on one of them; the client picks which to open from
+    // the "My Projects" directory. Pending self-service requests aren't
+    // openable yet.
     const accounts = (await findAccountsByEmail(account.email)).filter((a) => a.status === 'active');
-    if (accounts.length > 1) {
-      const pendingToken = signToken({ role: 'pending-project-pick', email: account.email }, FIFTEEN_MIN_MS);
-      return Response.json({ needsProjectPick: true, pendingToken, projects: accounts.map((a) => ({ id: a.projectId, name: a.projectName })) });
-    }
     const target = accounts[0] ?? account;
     const session = { role: 'client' as const, email: target.email, projectId: target.projectId, projectName: target.projectName };
     const token = signToken(session, SEVEN_DAYS_MS);

@@ -3,7 +3,6 @@ import { verifyPassword } from '@/lib/password';
 import { signToken } from '@/lib/session';
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
-const FIFTEEN_MIN_MS = 15 * 60 * 1000;
 
 export async function POST(request: Request) {
   const { email, password } = await request.json();
@@ -14,16 +13,12 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Incorrect email or password.' }, { status: 401 });
   }
 
-  // Same email can be linked to more than one project — let them pick
-  // instead of silently landing on whichever one happened to come first.
-  // Accounts still pending admin approval (self-service "add project"
-  // requests) don't count as a project the client can actually open yet.
+  // Same email can be linked to more than one active project — the session
+  // just lands on one of them; the client picks which one to actually open
+  // from the "My Projects" directory (which always loads first for a
+  // client, same as the admin's own project list). Accounts still pending
+  // admin approval (self-service "add project" requests) don't count.
   const accounts = (await findAccountsByEmail(account.email)).filter((a) => a.status === 'active');
-  if (accounts.length > 1) {
-    const pendingToken = signToken({ role: 'pending-project-pick', email: account.email }, FIFTEEN_MIN_MS);
-    return Response.json({ needsProjectPick: true, pendingToken, projects: accounts.map((a) => ({ id: a.projectId, name: a.projectName })) });
-  }
-
   const target = accounts[0] ?? account;
   const session = { role: 'client' as const, email: target.email, projectId: target.projectId, projectName: target.projectName };
   const token = signToken(session, THIRTY_DAYS_MS);
