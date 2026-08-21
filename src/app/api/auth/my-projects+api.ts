@@ -1,19 +1,24 @@
 import { findAccountsByEmail } from '@/lib/accounts';
+import { getProjectsWithStats } from '@/lib/clickup';
 import { requireAuth, signToken } from '@/lib/session';
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
-// GET: lists every project this client's email is linked to (so the app can
-// decide whether to show a "switch project" option at all), split from any
-// self-service requests still waiting on admin approval.
+// GET: lists every project this client's email is linked to, with the same
+// progress stats the admin's project list shows (for the "My Projects"
+// directory page), split from any self-service requests still waiting on
+// admin approval. Stats are only ever computed for this client's own
+// projects — never the whole workspace.
 export async function GET(request: Request) {
   const session = requireAuth(request);
   if (session instanceof Response) return session;
   if (session.role !== 'client') return Response.json({ projects: [], pending: [] });
 
   const accounts = await findAccountsByEmail(session.email);
+  const activeIds = accounts.filter((a) => a.status === 'active').map((a) => a.projectId);
+  const projects = await getProjectsWithStats(activeIds);
   return Response.json({
-    projects: accounts.filter((a) => a.status === 'active').map((a) => ({ id: a.projectId, name: a.projectName })),
+    projects,
     pending: accounts.filter((a) => a.status === 'pending').map((a) => ({ id: a.projectId, name: a.projectName })),
   });
 }

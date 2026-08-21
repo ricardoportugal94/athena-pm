@@ -130,6 +130,22 @@ export async function listProjectsWithStats() {
   );
 }
 
+// Same shape as listProjectsWithStats, but scoped to a specific set of
+// project ids — used for a client's own "My Projects" directory, which must
+// never fetch (or leak stats for) any project they aren't linked to.
+export async function getProjectsWithStats(projectIds: string[]) {
+  return Promise.all(
+    projectIds.map(async (id) => {
+      const [project, tasks] = await Promise.all([getProject(id), getProjectTasks(id)]);
+      const applicableTasks = tasks.filter((t) => t.applicable);
+      const done = applicableTasks.filter((t) => t.status === 'done').length;
+      const total = applicableTasks.length;
+      const blocked = applicableTasks.filter((t) => t.blocked).length;
+      return { ...project, done, total, percent: total ? Math.round((done / total) * 100) : 0, blocked };
+    })
+  );
+}
+
 export async function getProject(listId: string) {
   const list = await cu('GET', `/list/${listId}`);
   return { id: list.id, name: list.name, url: `https://app.clickup.com/${WORKSPACE_ID}/v/l/li/${list.id}` };

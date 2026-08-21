@@ -57,7 +57,7 @@ export const api = {
   requestProject: (pendingToken: string, projectId: string): Promise<{ pending: true; projectName: string }> =>
     request('/api/auth/request-project', { method: 'POST', body: JSON.stringify({ pendingToken, projectId }) }),
 
-  myProjects: (token: string): Promise<{ projects: ProjectSummary[]; pending: ProjectSummary[] }> =>
+  myProjects: (token: string): Promise<{ projects: ProjectWithStats[]; pending: ProjectSummary[] }> =>
     request('/api/auth/my-projects', { token }),
 
   switchProject: (token: string, projectId: string): Promise<AuthResult> =>
