@@ -49,7 +49,7 @@ export async function POST(request: Request, { id }: { id: string }) {
 
   if (channel === 'mia') {
     const projectName = session.role === 'admin' ? (await getProject(id).catch(() => null))?.name ?? 'this project' : session.projectName;
-    const extracted = await extractText(file, file.type);
+    const extracted = await extractText(file, file.type, filename);
     const contextForAi = extracted
       ? `${messageBody}\n\n--- CONTENTS OF THE ATTACHED FILE "${filename}" ---\n${extracted}`
       : `${messageBody} (shared a file named "${filename}", but its contents could not be read — this format isn't supported for reading)`;
