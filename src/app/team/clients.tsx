@@ -1,6 +1,6 @@
 import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -32,6 +32,19 @@ export default function ClientsScreen() {
   }, [token]);
 
   useEffect(load, [load]);
+
+  // One client can be linked to several projects, each its own account row
+  // sharing the same email/password — group them so the list shows one card
+  // per client instead of the same email repeated once per project.
+  const grouped = useMemo(() => {
+    const byEmail = new Map<string, ClientAccountRow[]>();
+    for (const a of accounts ?? []) {
+      const list = byEmail.get(a.email) ?? [];
+      list.push(a);
+      byEmail.set(a.email, list);
+    }
+    return Array.from(byEmail.entries()).map(([email, rows]) => ({ email, rows }));
+  }, [accounts]);
 
   const doReset = async (account: ClientAccountRow) => {
     try {
@@ -101,44 +114,46 @@ export default function ClientsScreen() {
 
           <FlatList
             style={styles.listFlex}
-            data={accounts ?? []}
-            keyExtractor={(a) => a.taskId}
+            data={grouped}
+            keyExtractor={(g) => g.email}
             contentContainerStyle={styles.list}
-            renderItem={({ item }) => (
+            renderItem={({ item: group }) => (
               <View style={styles.card}>
-                <View style={styles.cardMain}>
-                  <View style={styles.cardTitleRow}>
-                    <ThemedText type="smallBold" style={styles.email}>
-                      {item.email}
-                    </ThemedText>
-                    {item.status === 'pending' && (
-                      <View style={styles.pendingBadge}>
-                        <ThemedText style={styles.pendingBadgeText}>Pending approval</ThemedText>
+                <ThemedText type="smallBold" style={styles.email}>
+                  {group.email}
+                </ThemedText>
+
+                {group.rows.map((row) => (
+                  <View key={row.taskId} style={styles.projectRow}>
+                    <View style={styles.projectRowMain}>
+                      <ThemedText style={styles.projectName}>{row.projectName}</ThemedText>
+                      {row.status === 'pending' && (
+                        <View style={styles.pendingBadge}>
+                          <ThemedText style={styles.pendingBadgeText}>Pending approval</ThemedText>
+                        </View>
+                      )}
+                    </View>
+                    {row.status === 'pending' ? (
+                      <View style={styles.projectRowActions}>
+                        <Pressable onPress={() => doApprove(row)} style={styles.smallButton}>
+                          <ThemedText style={styles.smallButtonTextGreen}>Approve</ThemedText>
+                        </Pressable>
+                        <Pressable onPress={() => setDeleteTarget(row)} style={styles.smallButton}>
+                          <ThemedText style={styles.smallButtonTextRed}>Reject</ThemedText>
+                        </Pressable>
                       </View>
+                    ) : (
+                      <Pressable onPress={() => setDeleteTarget(row)} style={styles.smallButton}>
+                        <ThemedText style={styles.smallButtonTextRed}>Remove</ThemedText>
+                      </Pressable>
                     )}
                   </View>
-                  <ThemedText style={styles.projectName}>{item.projectName}</ThemedText>
-                </View>
+                ))}
+
                 <View style={styles.actions}>
-                  {item.status === 'pending' ? (
-                    <>
-                      <Pressable onPress={() => doApprove(item)} style={styles.resetButton}>
-                        <ThemedText style={styles.resetButtonText}>Approve</ThemedText>
-                      </Pressable>
-                      <Pressable onPress={() => setDeleteTarget(item)} style={styles.deleteButton}>
-                        <ThemedText style={styles.deleteButtonText}>Reject</ThemedText>
-                      </Pressable>
-                    </>
-                  ) : (
-                    <>
-                      <Pressable onPress={() => setResetTarget(item)} style={styles.resetButton}>
-                        <ThemedText style={styles.resetButtonText}>Reset password</ThemedText>
-                      </Pressable>
-                      <Pressable onPress={() => setDeleteTarget(item)} style={styles.deleteButton}>
-                        <ThemedText style={styles.deleteButtonText}>Delete</ThemedText>
-                      </Pressable>
-                    </>
-                  )}
+                  <Pressable onPress={() => setResetTarget(group.rows[0])} style={styles.resetButton}>
+                    <ThemedText style={styles.resetButtonText}>Reset password</ThemedText>
+                  </Pressable>
                 </View>
               </View>
             )}
@@ -173,19 +188,19 @@ export default function ClientsScreen() {
 
       <ActionSheet
         visible={!!deleteTarget}
-        title={deleteTarget?.status === 'pending' ? 'Reject request?' : 'Delete client?'}
+        title={deleteTarget?.status === 'pending' ? 'Reject request?' : 'Remove project?'}
         message={
           deleteTarget
             ? deleteTarget.status === 'pending'
               ? `${deleteTarget.email} — won't gain access to "${deleteTarget.projectName}". Their other project(s), if any, are not affected.`
-              : `${deleteTarget.email} — Deletes the client's account. The project and its tasks in ClickUp are not affected.`
+              : `${deleteTarget.email} — loses access to "${deleteTarget.projectName}". Their other project(s), if any, are not affected. The project and its tasks in ClickUp are not affected either way.`
             : undefined
         }
         cancelLabel="Cancel"
         onCancel={() => setDeleteTarget(null)}
         options={
           deleteTarget
-            ? [{ label: deleteTarget.status === 'pending' ? 'Reject' : 'Delete', destructive: true, onPress: () => doDelete(deleteTarget) }]
+            ? [{ label: deleteTarget.status === 'pending' ? 'Reject' : 'Remove', destructive: true, onPress: () => doDelete(deleteTarget) }]
             : []
         }
       />
@@ -295,17 +310,27 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     gap: Spacing.two,
   },
-  cardMain: { gap: 2 },
-  cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one, flexWrap: 'wrap' },
   pendingBadge: { backgroundColor: '#FFF1CC', borderRadius: Radius.pill, paddingVertical: 2, paddingHorizontal: 8 },
   pendingBadgeText: { color: '#8A6D00', fontWeight: '700', fontSize: 10 },
   email: { color: '#1C1C1C', fontSize: 15 },
-  projectName: { color: '#8A8A8A', fontSize: 12, fontWeight: '600' },
-  actions: { flexDirection: 'row', gap: Spacing.one, flexWrap: 'wrap' },
+  projectRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    gap: Spacing.one,
+  },
+  projectRowMain: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one, flexWrap: 'wrap', flex: 1 },
+  projectRowActions: { flexDirection: 'row', gap: Spacing.one },
+  projectName: { color: '#4A4A4A', fontSize: 13, fontWeight: '600' },
+  actions: { flexDirection: 'row', gap: Spacing.one, flexWrap: 'wrap', marginTop: 4 },
   resetButton: { backgroundColor: '#F2F2F2', borderRadius: Radius.pill, paddingVertical: 8, paddingHorizontal: 12 },
   resetButtonText: { color: '#7A8F00', fontWeight: '700', fontSize: 12 },
-  deleteButton: { backgroundColor: '#F2F2F2', borderRadius: Radius.pill, paddingVertical: 8, paddingHorizontal: 12 },
-  deleteButtonText: { color: '#C0392B', fontWeight: '700', fontSize: 12 },
+  smallButton: { backgroundColor: '#F2F2F2', borderRadius: Radius.pill, paddingVertical: 5, paddingHorizontal: 10 },
+  smallButtonTextGreen: { color: '#7A8F00', fontWeight: '700', fontSize: 11 },
+  smallButtonTextRed: { color: '#C0392B', fontWeight: '700', fontSize: 11 },
   addCard: { backgroundColor: '#FFFFFF', borderRadius: Radius.card, ...Shadow.card, padding: Spacing.three, gap: Spacing.two },
   addTitle: { color: '#1C1C1C' },
   addInput: { backgroundColor: '#F2F2F2', color: '#1C1C1C', borderRadius: Radius.card * 0.6, padding: Spacing.two, fontSize: 14 },
