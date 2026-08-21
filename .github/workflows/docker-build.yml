@@ -21,6 +21,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
@@ -29,3 +32,5 @@ jobs:
           tags: ghcr.io/${{ github.repository_owner }}/athena-pm:latest
           build-args: |
             EXPO_PUBLIC_GOOGLE_CLIENT_ID=842593789503-t5p1u7l8ps6cvk45iv0up0o1n6ufism7.apps.googleusercontent.com
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
